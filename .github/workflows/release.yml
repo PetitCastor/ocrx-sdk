@@ -1,0 +1,76 @@
+name: Release SDK
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Stable semver to publish
+        required: true
+        default: 2.0.0
+
+concurrency:
+  group: release-sdk
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Publish OCRX SDK
+    runs-on: windows-latest
+    environment: nuget-release
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Validate version
+        shell: pwsh
+        run: |
+          $version = '${{ inputs.version }}'
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Expected stable semver, got '$version'." }
+          if (git tag --list "v$version") { throw "Tag v$version already exists." }
+          "RELEASE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - run: dotnet restore OcrxSdk.slnx
+      - run: dotnet build OcrxSdk.slnx --no-restore -c Release "-p:MinVerVersionOverride=$env:RELEASE_VERSION"
+      - run: dotnet test OcrxSdk.slnx --no-build -c Release --verbosity normal
+      - name: Pack packages
+        shell: pwsh
+        run: |
+          foreach ($project in @(
+            'src/Ocrx.Contracts/Ocrx.Contracts.csproj',
+            'src/Ocrx.Sdk/Ocrx.Sdk.csproj',
+            'src/Ocrx.Sdk.Testing/Ocrx.Sdk.Testing.csproj',
+            'src/Ocrx.Sdk.Overlay/Ocrx.Sdk.Overlay.csproj',
+            'templates/Ocrx.Plugin.Template.csproj'
+          )) {
+            dotnet pack $project --no-restore -c Release -o packages "-p:MinVerVersionOverride=$env:RELEASE_VERSION"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: NuGet login
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+      - name: Publish packages
+        shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+        run: |
+          Get-ChildItem packages/*.nupkg | ForEach-Object {
+            dotnet nuget push $_.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
+          }
+          Get-ChildItem packages/*.snupkg | ForEach-Object {
+            dotnet nuget push $_.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
+          }
+      - name: Tag and create release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git tag "v$env:RELEASE_VERSION" $env:GITHUB_SHA
+          git push origin "v$env:RELEASE_VERSION"
+          gh release create "v$env:RELEASE_VERSION" --title "OCRX SDK v$env:RELEASE_VERSION" --generate-notes --target $env:GITHUB_SHA

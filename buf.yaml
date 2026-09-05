@@ -1,0 +1,42 @@
+version: v2
+
+# One module: the wire contract between the engine and every plugin. It is generated into C# by
+# Grpc.Tools at build time, so `dotnet build` already tells us the file parses — what it cannot tell
+# us is whether a change to it silently breaks a plugin that ships separately. That is this file's
+# job.
+modules:
+  - path: protos
+
+lint:
+  use: [STANDARD]
+  # Every exception here is a name that predates buf, and every fix would be a rename — which is
+  # exactly the kind of change this config exists to stop. Adding a rule here is only legitimate for
+  # a symbol that already shipped; new symbols are expected to satisfy STANDARD.
+  #
+  #   PACKAGE_VERSION_SUFFIX / PACKAGE_DIRECTORY_MATCH — package `capture` in protos/capture.proto,
+  #     rather than `capture.v1` in protos/capture/v1/. Renaming it rewrites csharp_namespace and
+  #     every generated type reference on both sides of the boundary.
+  #   RPC_REQUEST_STANDARD_NAME / RPC_RESPONSE_STANDARD_NAME — GetStatus takes StatusRequest and
+  #     returns StatusResponse rather than GetStatusRequest/GetStatusResponse. Renaming them would
+  #     rewrite the generated types the engine and the SDK's mapping both name.
+  #   ENUM_ZERO_VALUE_SUFFIX — RoiMode's zero is ROI_MODE_TEXT, a real default and not "unspecified".
+  #     Note this one is off module-wide: `except` has no per-symbol scoping, and RoiResultKind lives
+  #     in the same file, so nothing mechanically stops a NEW enum from landing with a non-_UNSPECIFIED
+  #     zero. Until ROI_MODE_TEXT's slot is renamed, that rule is on reviewers, not on buf. See the
+  #     comment on RoiResultKind in capture.proto for why the two enums differ.
+  except:
+    - PACKAGE_VERSION_SUFFIX
+    - PACKAGE_DIRECTORY_MATCH
+    - RPC_REQUEST_STANDARD_NAME
+    - RPC_RESPONSE_STANDARD_NAME
+    - ENUM_ZERO_VALUE_SUFFIX
+
+breaking:
+  # PACKAGE, not WIRE_JSON. WIRE/WIRE_JSON deliberately omit the *_NO_DELETE rules (MESSAGE, ENUM,
+  # SERVICE, RPC, ONEOF) because they cannot tell a deletion from a move they cannot see — so
+  # deleting `rpc DumpFrame`, dropping RoiSetUpdate, or renaming the package all pass, which is
+  # exactly the runtime UNIMPLEMENTED failure this job exists to catch. FILE would cover those but
+  # also forbids MOVING a message between files, a pure refactor for a single-module repo where
+  # every plugin consumes the generated C# rather than the .proto path. PACKAGE keeps every
+  # deletion and package-rename check while allowing types to move within the package.
+  use: [PACKAGE]

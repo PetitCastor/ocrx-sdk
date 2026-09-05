@@ -1,0 +1,70 @@
+# OCRX.Sdk.Testing
+
+The testing companion to `Ocrx.Sdk`, in the shape of `Microsoft.AspNetCore.Mvc.Testing`: a
+public surface for driving a plugin under test, so a plugin in its own repository needs no
+`InternalsVisibleTo` from the SDK.
+
+Two layers. `TickDataBuilder` and `FakePluginServices` cover unit tests — no engine, no OCR, no
+game. `ReplayHarness` covers parity: it spawns a real `Ocrx.Engine.exe` replaying a PNG corpus and
+drives the plugin through its real `OcrxPluginHost` path, which is what a plugin's CI runs.
+
+## Install
+
+```powershell
+dotnet add package Ocrx.Sdk.Testing
+```
+
+The first OCRX package train is version `2.0.0`.
+
+## Unit test
+
+```csharp
+var plugin = new CounterPlugin();
+var services = new FakePluginServices();
+var tick = new TickDataBuilder().Text("counter", "4/8").Build();
+
+await plugin.OnTickAsync(TickContext.ForTesting(tick, services), default);
+
+Assert.Equal("4/8", Assert.Single(services.Emitted).RawText);
+```
+
+The builder produces a tick the way the engine would have sent it — through the SDK's own wire
+mapping — so a tick that could never arrive on the wire cannot pass a test. It covers `.Text`,
+`.Detailed`, `.Pixels`, `.Errored`, plus `.Manual()`, `.FrameSeq(n)`, and `.At(instant)`.
+
+## Parity test
+
+```csharp
+var result = await ReplayHarness.RunAsync(new ReplayOptions
+{
+    EnginePath = EngineLocator.Resolve(),
+    CorpusDir = ReplayCorpus.Resolve("Fixtures/Replay/my-corpus"),
+    Plugin = new CounterPlugin(),
+});
+
+Assert.Equal(StreamEndReason.ReplayCompleted, result.Reason);
+```
+
+`EngineLocator.Resolve()` honours `OCRX_ENGINE_PATH` and otherwise uses the current per-user OCRX installation.
+Corpus layout and capture: [`docs/REPLAY.md`](https://github.com/PetitCastor/ocrx-sdk/blob/master/docs/REPLAY.md).
+
+### Parity test against a video
+
+Set `VideoPath` instead of `CorpusDir` to drive the same run from an MP4 (`--video`, TASK-25) — one
+file standing in for a long session that would be thousands of PNGs. Set exactly one of the two;
+`RunAsync` throws if both or neither is set.
+
+```csharp
+var result = await ReplayHarness.RunAsync(new ReplayOptions
+{
+    EnginePath = EngineLocator.Resolve(),
+    VideoPath = ReplayCorpus.Resolve("Fixtures/Replay/my-clip/session.mp4"),
+    VideoFps = 2,   // optional; null leaves the engine on its own 1000/ScanIntervalMs default
+    Plugin = new CounterPlugin(),
+});
+
+Assert.Equal(StreamEndReason.ReplayCompleted, result.Reason);
+```
+
+The harness only ever drives the deterministic drain — it never asks for `--video-realtime` or
+`--video-loop`, which exist for interactive dev against a live engine, not an automated assertion.
