@@ -23,10 +23,8 @@ artifacts/
 # Runtime output
 captures/
 
-# Excluded from version control per request
+# The engine's performance harness stays private. SDK docs and validation scripts are public.
 benchmarks/
-docs/
-scripts/
 
 # Dependencies
 packages/

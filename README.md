@@ -21,7 +21,8 @@ game files, or inspect network traffic.
 | `Ocrx.Plugin.Template` | `dotnet new ocrx-plugin` project template. |
 
 All OCRX 2 packages use the same version train. The first public release is `2.0.0`; GameCapture
-1.x packages remain available only for existing consumers and are not wire- or source-compatible.
+1.x packages remain available only for existing consumers and are not source-, package-, install-path-,
+or endpoint-compatible with OCRX 2.
 
 ## Create a plugin
 

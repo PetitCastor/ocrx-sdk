@@ -24,6 +24,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Require the reviewed master tip
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -ne 'refs/heads/master') {
+            throw 'SDK releases must be dispatched from master.'
+          }
+          git fetch origin master:refs/remotes/origin/master --no-tags
+          $masterTip = (git rev-parse origin/master).Trim()
+          if ($env:GITHUB_SHA -ne $masterTip) {
+            throw "SDK releases must use the current master tip ($masterTip), not $env:GITHUB_SHA."
+          }
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
@@ -47,7 +58,7 @@ jobs:
             'src/Ocrx.Sdk.Overlay/Ocrx.Sdk.Overlay.csproj',
             'templates/Ocrx.Plugin.Template.csproj'
           )) {
-            dotnet pack $project --no-restore -c Release -o packages "-p:MinVerVersionOverride=$env:RELEASE_VERSION"
+            dotnet pack $project -c Release -o packages "-p:MinVerVersionOverride=$env:RELEASE_VERSION"
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
       - name: NuGet login

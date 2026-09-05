@@ -7,7 +7,8 @@ public static class EngineLocator
     private const string ExeName = "Ocrx.Engine.exe";
     private static readonly string InstalledPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "OCRX",
+        "OcrxEngine",
+        "current",
         ExeName);
 
     /// <summary>

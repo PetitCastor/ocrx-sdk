@@ -107,10 +107,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Reject stale GameCapture identifiers
+      - name: Reject stale v1 identifiers
         shell: bash
         run: |
-          matches=$(grep -RInE 'GameCapture|gamecapture' . \
+          matches=$(grep -RInE '[G]ameCapture|[g]amecapture' . \
             --exclude-dir=.git \
             --exclude=README.md \
             --exclude=COMPATIBILITY.md || true)
