@@ -1,0 +1,170 @@
+﻿{
+    "version":  1,
+    "createdAt":  "2026-09-05T13:12:11.5635397+00:00",
+    "updatedAt":  "2026-09-05T17:21:25.2793332+00:00",
+    "description":  "Initial baseline created by \u0027slopwatch init\u0027 on 2026-09-05 13:12:11 UTC",
+    "entries":  [
+                    {
+                        "hash":  "01e4f55f7f2558be",
+                        "ruleId":  "SW005",
+                        "filePath":  "src/Ocrx.Contracts/Ocrx.Contracts.csproj",
+                        "lineNumber":  22,
+                        "codeSnippet":  "\u003cNoWarn\u003e$(NoWarn);CS1591\u003c/NoWarn\u003e",
+                        "message":  "Adding warnings to NoWarn: CS1591",
+                        "baselinedAt":  "2026-09-05T17:21:25.2792818+00:00"
+                    },
+                    {
+                        "hash":  "6c593e8db23ea809",
+                        "ruleId":  "SW003",
+                        "filePath":  "src/Ocrx.Sdk/CaptureClient.cs",
+                        "lineNumber":  434,
+                        "codeSnippet":  "catch (RpcException) { }",
+                        "message":  "Empty catch block swallows exceptions without handling",
+                        "baselinedAt":  "2026-09-05T17:21:25.2792988+00:00"
+                    },
+                    {
+                        "hash":  "48b83d1ed1cbe27e",
+                        "ruleId":  "SW003",
+                        "filePath":  "src/Ocrx.Sdk/CaptureClient.cs",
+                        "lineNumber":  435,
+                        "codeSnippet":  "catch (InvalidOperationException) { }",
+                        "message":  "Empty catch block swallows exceptions without handling",
+                        "baselinedAt":  "2026-09-05T17:21:25.2793005+00:00"
+                    },
+                    {
+                        "hash":  "3d1aa3cf3cdd43e6",
+                        "ruleId":  "SW003",
+                        "filePath":  "src/Ocrx.Sdk/CaptureClient.cs",
+                        "lineNumber":  442,
+                        "codeSnippet":  "catch (OperationCanceledException) { }",
+                        "message":  "Empty catch block swallows exceptions without handling",
+                        "baselinedAt":  "2026-09-05T17:21:25.2793018+00:00"
+                    },
+                    {
+                        "hash":  "5b48bcf17e09445e",
+                        "ruleId":  "SW005",
+                        "filePath":  "src/Ocrx.Sdk/Ocrx.Sdk.csproj",
+                        "lineNumber":  20,
+                        "codeSnippet":  "\u003cNoWarn\u003e$(NoWarn);CS1591\u003c/NoWarn\u003e",
+                        "message":  "Adding warnings to NoWarn: CS1591",
+                        "baselinedAt":  "2026-09-05T17:21:25.2793031+00:00"
+                    },
+                    {
+                        "hash":  "f6fc704607a5b12e",
+                        "ruleId":  "SW003",
+                        "filePath":  "src/Ocrx.Sdk/Plugin/ConfigSeed.cs",
+                        "lineNumber":  252,
+                        "codeSnippet":  "catch (IOException)\r\n            {\r\n                // Losing the temp file matters less than the exception on its way up.\r\n            }",
+                        "message":  "Empty catch block swallows exceptions without handling",
+                        "baselinedAt":  "2026-09-05T17:21:25.2793076+00:00"
+                    },
+                    {
+                        "hash":  "eafcd73d408c9f57",
+                        "ruleId":  "SW003",
+                        "filePath":  "src/Ocrx.Sdk/Plugin/Output/CompositeRecordSink.cs",
+                        "lineNumber":  11,
+                        "codeSnippet":  "catch (Exception) { /* one failing sink must not block the others */ }",
+                        "message":  "Empty catch block swallows exceptions without handling",
+                        "baselinedAt":  "2026-09-05T17:21:25.2793092+00:00"
+                    },
+                    {
+                        "hash":  "63b0bd6def1482ac",
+                        "ruleId":  "SW003",
+                        "filePath":  "src/Ocrx.Sdk/Plugin/Output/ConsoleSink.cs",
+                        "lineNumber":  27,
+                        "codeSnippet":  "catch (IOException) { }",
+                        "message":  "Empty catch block swallows exceptions without handling",
+                        "baselinedAt":  "2026-09-05T17:21:25.2793106+00:00"
+                    },
+                    {
+                        "hash":  "19e45aeef4c7c915",
+                        "ruleId":  "SW003",
+                        "filePath":  "src/Ocrx.Sdk/Plugin/Output/ConsoleSink.cs",
+                        "lineNumber":  104,
+                        "codeSnippet":  "catch (Exception e) when (e is IOException or ArgumentOutOfRangeException)\r\n        {\r\n            // Terminal resized/detached mid-operation; next redraw self-corrects.\r\n        }",
+                        "message":  "Empty catch block swallows exceptions without handling",
+                        "baselinedAt":  "2026-09-05T17:21:25.2793177+00:00"
+                    },
+                    {
+                        "hash":  "2a3f2b0c7f26cc89",
+                        "ruleId":  "SW003",
+                        "filePath":  "src/Ocrx.Sdk/Plugin/Output/ConsoleSink.cs",
+                        "lineNumber":  125,
+                        "codeSnippet":  "catch (Exception e) when (e is IOException or ArgumentOutOfRangeException)\r\n        {\r\n        }",
+                        "message":  "Empty catch block swallows exceptions without handling",
+                        "baselinedAt":  "2026-09-05T17:21:25.2793192+00:00"
+                    },
+                    {
+                        "hash":  "a04a9f97298da2bf",
+                        "ruleId":  "SW005",
+                        "filePath":  "src/Ocrx.Sdk.Testing/Ocrx.Sdk.Testing.csproj",
+                        "lineNumber":  19,
+                        "codeSnippet":  "\u003cNoWarn\u003e$(NoWarn);CS1591\u003c/NoWarn\u003e",
+                        "message":  "Adding warnings to NoWarn: CS1591",
+                        "baselinedAt":  "2026-09-05T17:21:25.2793205+00:00"
+                    },
+                    {
+                        "hash":  "47adbed38dc82afe",
+                        "ruleId":  "SW003",
+                        "filePath":  "src/Ocrx.Sdk.Testing/ReplayHarness.cs",
+                        "lineNumber":  114,
+                        "codeSnippet":  "catch { /* the TimeoutException below is what the caller sees */ }",
+                        "message":  "Empty catch block swallows exceptions without handling",
+                        "baselinedAt":  "2026-09-05T17:21:25.2793219+00:00"
+                    },
+                    {
+                        "hash":  "04c5075a76c01804",
+                        "ruleId":  "SW003",
+                        "filePath":  "src/Ocrx.Sdk.Testing/ReplayHarness.cs",
+                        "lineNumber":  127,
+                        "codeSnippet":  "catch (OperationCanceledException) { /* the finally below kills the tree */ }",
+                        "message":  "Empty catch block swallows exceptions without handling",
+                        "baselinedAt":  "2026-09-05T17:21:25.2793232+00:00"
+                    },
+                    {
+                        "hash":  "f09eccd52f0546b4",
+                        "ruleId":  "SW003",
+                        "filePath":  "src/Ocrx.Sdk.Testing/ReplayHarness.cs",
+                        "lineNumber":  148,
+                        "codeSnippet":  "catch (InvalidOperationException) { /* already exited */ }",
+                        "message":  "Empty catch block swallows exceptions without handling",
+                        "baselinedAt":  "2026-09-05T17:21:25.2793268+00:00"
+                    },
+                    {
+                        "hash":  "f472966f12ac34e9",
+                        "ruleId":  "SW003",
+                        "filePath":  "src/Ocrx.Sdk.Testing/ReplayHarness.cs",
+                        "lineNumber":  149,
+                        "codeSnippet":  "catch (Win32Exception) { /* already exited/exiting */ }",
+                        "message":  "Empty catch block swallows exceptions without handling",
+                        "baselinedAt":  "2026-09-05T17:21:25.279328+00:00"
+                    },
+                    {
+                        "hash":  "7c86b541b4ec1a61",
+                        "ruleId":  "SW005",
+                        "filePath":  "templates/Ocrx.Plugin.Template.csproj",
+                        "lineNumber":  25,
+                        "codeSnippet":  "\u003cNoWarn\u003e$(NoWarn);NU5128\u003c/NoWarn\u003e",
+                        "message":  "Adding warnings to NoWarn: NU5128",
+                        "baselinedAt":  "2026-09-05T17:21:25.2793292+00:00"
+                    },
+                    {
+                        "hash":  "b12ec9c3903f1341",
+                        "ruleId":  "SW003",
+                        "filePath":  "templates/ocrx-plugin/MyCapturePlugin.cs",
+                        "lineNumber":  79,
+                        "codeSnippet":  "catch\r\n        {\r\n            // Debugging aid only: a failed dump must never take down the tick that already emitted.\r\n        }",
+                        "message":  "Empty catch block swallows exceptions without handling",
+                        "baselinedAt":  "2026-09-05T17:21:25.2793309+00:00"
+                    },
+                    {
+                        "hash":  "bd1249c4a81f8e88",
+                        "ruleId":  "SW001",
+                        "filePath":  "templates/ocrx-plugin/tests/MyCapturePluginTests.cs",
+                        "lineNumber":  65,
+                        "codeSnippet":  "Fact(Skip = \"needs corpus + OCRX_ENGINE_PATH\")",
+                        "message":  "Test method \u0027Corpus_emits_one_record\u0027 is disabled: needs corpus + OCRX_ENGINE_PATH",
+                        "baselinedAt":  "2026-09-05T17:21:25.2793324+00:00"
+                    }
+                ]
+}

@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Build and test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore OcrxSdk.slnx
+      - run: dotnet build OcrxSdk.slnx --no-restore -c Release
+      - run: dotnet test OcrxSdk.slnx --no-build -c Release --verbosity normal
+      - run: dotnet tool restore
+      - run: dotnet slopwatch analyze -d .
+
+  overlay-portability:
+    name: Overlay portability
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet test tests/Ocrx.Sdk.Overlay.Tests/Ocrx.Sdk.Overlay.Tests.csproj -c Release
+
+  template-guard:
+    name: Template cold start
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Pack SDK and template
+        shell: pwsh
+        run: |
+          $version = '2.0.0-ci.' + $env:GITHUB_RUN_NUMBER
+          foreach ($project in @(
+            'src/Ocrx.Contracts/Ocrx.Contracts.csproj',
+            'src/Ocrx.Sdk/Ocrx.Sdk.csproj',
+            'src/Ocrx.Sdk.Testing/Ocrx.Sdk.Testing.csproj',
+            'src/Ocrx.Sdk.Overlay/Ocrx.Sdk.Overlay.csproj',
+            'templates/Ocrx.Plugin.Template.csproj'
+          )) {
+            dotnet pack $project -c Release -o feed "-p:MinVerVersionOverride=$version"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          "SDK_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Instantiate template
+        shell: pwsh
+        run: |
+          $template = Get-ChildItem feed/Ocrx.Plugin.Template.*.nupkg | Select-Object -First 1
+          dotnet new install $template.FullName
+          dotnet new ocrx-plugin -n GuardPlugin -o "$env:RUNNER_TEMP/GuardPlugin" --SdkVersion $env:SDK_VERSION
+          dotnet new nugetconfig -o "$env:RUNNER_TEMP/GuardPlugin"
+          dotnet nuget add source "$PWD/feed" --name ocrx-ci --configfile "$env:RUNNER_TEMP/GuardPlugin/nuget.config"
+      - name: Build generated plugin
+        run: dotnet build "$env:RUNNER_TEMP/GuardPlugin/GuardPlugin.csproj" -c Release
+      - name: Test generated plugin
+        run: dotnet test "$env:RUNNER_TEMP/GuardPlugin/tests/GuardPlugin.Tests.csproj" -c Release
+
+  proto-guard:
+    name: Proto lint and compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect protocol baseline
+        id: baseline
+        shell: bash
+        run: |
+          git fetch --no-tags origin +refs/heads/master:refs/heads/master
+          if git cat-file -e master:buf.yaml 2>/dev/null; then
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'exists=false' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: bufbuild/buf-action@8c6a16e16f12ba20b6470afa9c2ba9b5ba8c97c3
+        with:
+          version: 1.72.0
+          lint: true
+          breaking: ${{ steps.baseline.outputs.exists == 'true' }}
+          breaking_against: '.git#branch=master'
+          format: false
+          push: false
+          archive: false
+          pr_comment: false
+
+  identity-guard:
+    name: OCRX identity guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject stale v1 identifiers
+        shell: bash
+        run: |
+          matches=$(grep -RInE '[G]ameCapture|[g]amecapture' . \
+            --exclude-dir=.git \
+            --exclude=README.md \
+            --exclude=COMPATIBILITY.md || true)
+          if [ -n "$matches" ]; then
+            echo "$matches"
+            echo '::error::Stale product identity found outside migration documentation.'
+            exit 1
+          fi

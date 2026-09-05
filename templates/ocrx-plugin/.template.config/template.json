@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "PetitCastor",
+  "classifications": ["Ocrx", "Plugin"],
+  "identity": "Ocrx.Plugin.Template",
+  "name": "Ocrx plugin",
+  "description": "A console plugin project wired against the packed Ocrx.Sdk — one ROI, a test project, and a CI stub, ready to calibrate.",
+  "shortName": "ocrx-plugin",
+  "sourceName": "MyCapturePlugin",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "symbols": {
+    "SdkVersion": { "type": "parameter", "datatype": "string",
+                    "defaultValue": "2.*", "replaces": "SDK_VERSION",
+                    "description": "The Ocrx.Sdk / Ocrx.Contracts / Ocrx.Sdk.Testing package version to reference." }
+  }
+}
