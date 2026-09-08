@@ -1,7 +1,8 @@
 # Compatibility
 
-OCRX 2 is a clean product and package break from GameCapture 1. There is no supported source,
-package, executable, named-pipe, configuration, or installation-path compatibility layer.
+OCRX 2 is a clean product and package break from everything published before it. There is no
+supported source, package, executable, named-pipe, configuration, or installation-path
+compatibility layer with any pre-2.0 release.
 
 The protobuf wire contract is intentionally more stable: field numbers, service wire names, and
 behavior remain unchanged unless a real protocol change requires otherwise. Generated C# types use
@@ -11,7 +12,7 @@ the `Ocrx.Contracts.Proto` namespace.
 
 | Protocol | Engine | SDK train | Plugin train | Notes |
 | --- | --- | --- | --- | --- |
-| 1 | OCRX 2.0.x | `Ocrx.*` 2.0.x | OCRX plugins 2.0.x | First OCRX release; no GameCapture v1 product compatibility. |
+| 1 | OCRX 2.0.x | `Ocrx.*` 2.0.x | OCRX plugins 2.0.x | First OCRX release; no compatibility with any pre-2.0 product. |
 
 Package, engine, and plugin versions move independently after 2.0.0. Compatibility is negotiated
 by the protocol integer rather than by matching artifact versions.
