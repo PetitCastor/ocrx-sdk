@@ -20,9 +20,10 @@ game files, or inspect network traffic.
 | `Ocrx.Sdk.Overlay` | Optional click-through Windows overlay output. |
 | `Ocrx.Plugin.Template` | `dotnet new ocrx-plugin` project template. |
 
-All OCRX 2 packages use the same version train. The first public release is `2.0.0`; GameCapture
-1.x packages remain available only for existing consumers and are not source-, package-, install-path-,
-or endpoint-compatible with OCRX 2.
+All OCRX 2 packages use the same version train, and the first public release is `2.0.0`. Nothing
+published before it is source-, package-, install-path-, or endpoint-compatible with OCRX 2. Those
+pre-2.0 packages are unlisted on nuget.org: an existing pin still restores, but they no longer
+appear in search and are not offered to new consumers.
 
 ## Create a plugin
 
