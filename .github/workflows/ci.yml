@@ -107,15 +107,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # README.md and COMPATIBILITY.md used to be excluded here, on the theory that migration
+      # documentation has to name what it migrates from. It does not: a sentence saying OCRX 2 is a
+      # clean break from the old name carries that name forward on every page that says it, and the
+      # same fact reads as "any pre-2.0 install". Both files were rewritten that way, so the gate now
+      # covers the whole tree. The character classes keep the pattern from matching its own source.
       - name: Reject stale v1 identifiers
         shell: bash
         run: |
           matches=$(grep -RInE '[G]ameCapture|[g]amecapture' . \
             --exclude-dir=.git \
-            --exclude=README.md \
-            --exclude=COMPATIBILITY.md || true)
+            --exclude-dir=bin \
+            --exclude-dir=obj || true)
           if [ -n "$matches" ]; then
             echo "$matches"
-            echo '::error::Stale product identity found outside migration documentation.'
+            echo '::error::Stale legacy identity found.'
             exit 1
           fi
