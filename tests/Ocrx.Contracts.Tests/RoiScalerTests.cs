@@ -241,6 +241,29 @@ public class RoiScalerTests
         Assert.Equal(0u, canvas.X); // width-bound, so no pillarbox on the other axis
     }
 
+    [Theory]
+    [InlineData(2561, 1440)]   // 1px of leftover width, height-bound
+    [InlineData(2563, 1440)]   // 3px
+    [InlineData(2560, 1441)]   // 1px of leftover height, width-bound
+    [InlineData(1921, 1080)]   // odd leftover at a real-world width
+    public void ToFrame_OddLeftover_SplitsBarsWithinOnePixel(int frameWidth, int frameHeight)
+    {
+        // An odd number of leftover pixels has no symmetric split: one side must keep the extra
+        // pixel. The two Symmetric tests above both land on even leftovers, so neither pins this.
+        // What must hold is that the canvas keeps its full mapped size and the bars differ by at
+        // most one — a drift in the centering offset shows up here as a larger gap.
+        var canvas = RoiScaler.ToFrame(new RoiRect(0, 0, 2560, 1440), frameWidth, frameHeight);
+
+        var leftBar = (int)canvas.X;
+        var rightBar = frameWidth - (int)(canvas.X + canvas.Width);
+        var topBar = (int)canvas.Y;
+        var bottomBar = frameHeight - (int)(canvas.Y + canvas.Height);
+
+        Assert.True(Math.Abs(leftBar - rightBar) <= 1, $"pillarbox bars {leftBar}/{rightBar}");
+        Assert.True(Math.Abs(topBar - bottomBar) <= 1, $"letterbox bars {topBar}/{bottomBar}");
+        Assert.True(leftBar >= 0 && rightBar >= 0 && topBar >= 0 && bottomBar >= 0);
+    }
+
     [Fact]
     public void ToFrame_RoiAtReferenceFarEdge_StaysInsideTheCenteredCanvas()
     {
@@ -403,5 +426,70 @@ public class RoiScalerTests
 
         Assert.True(Math.Abs(roundTrippedX - CounterRoi.X) <= 1);
         Assert.True(Math.Abs(roundTrippedY - CounterRoi.Y) <= 1);
+    }
+
+    // SDK-01's injected reference, on the members other than ToFrame.
+    //
+    // Every case below picks a 1280x720 reference against a 2560x1440 frame, where the injected
+    // reference gives exactly double the default's answer. That is the point: an overload that
+    // quietly ignored its RoiReference and fell back to RoiReference.Default would return the
+    // reference-space value unchanged and fail, so these pin the plumbing itself rather than
+    // re-testing the fit arithmetic ToFrame's own tests already cover.
+
+    [Fact]
+    public void ToFrameXY_NonDefaultReference_ScalesAgainstThatReference()
+    {
+        var x = RoiScaler.ToFrameX(100, 2560, 1440, new RoiReference(1280, 720));
+        var y = RoiScaler.ToFrameY(100, 2560, 1440, new RoiReference(1280, 720));
+
+        Assert.Equal(200, x);
+        Assert.Equal(200, y);
+        Assert.NotEqual(RoiScaler.ToFrameX(100, 2560, 1440), x);
+    }
+
+    [Fact]
+    public void ObsoleteToFrameXY_NonDefaultReference_ImpliesTheOtherDimensionFromIt()
+    {
+        // The implied-dimension delegation must use the injected reference's aspect, not 16:9's.
+        // Here they coincide numerically, but the scale does not: a fallback to RoiReference.Default
+        // would give 100, not 200.
+#pragma warning disable CS0618 // deliberately exercising the obsolete overload
+        var x = RoiScaler.ToFrameX(100, 2560, new RoiReference(1280, 720));
+        var y = RoiScaler.ToFrameY(100, 1440, new RoiReference(1280, 720));
+#pragma warning restore CS0618
+
+        Assert.Equal(200, x);
+        Assert.Equal(200, y);
+    }
+
+    [Fact]
+    public void DescribeFrame_NonDefaultReference_DescribesThatReference()
+    {
+        var atReference = RoiScaler.DescribeFrame(1280, 720, new RoiReference(1280, 720));
+        var scaled = RoiScaler.DescribeFrame(2560, 1440, new RoiReference(1280, 720));
+
+        // 1280x720 is the injected reference, so it is the 1:1 case — against the default it would
+        // report a x0.5 downscale instead.
+        Assert.Contains("1:1", atReference);
+        Assert.Contains("x2", scaled);
+        Assert.DoesNotContain("off-aspect", scaled); // same aspect as the injected reference
+    }
+
+    [Theory]
+    [InlineData(0, 720)]
+    [InlineData(1280, 0)]
+    [InlineData(-1280, 720)]
+    [InlineData(1280, -720)]
+    public void AxisHelpersAndDescribeFrame_InvalidReference_Throw(int referenceWidth, int referenceHeight)
+    {
+        var reference = new RoiReference(referenceWidth, referenceHeight);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => RoiScaler.ToFrameX(100, 1920, 1080, reference));
+        Assert.Throws<ArgumentOutOfRangeException>(() => RoiScaler.ToFrameY(100, 1920, 1080, reference));
+        Assert.Throws<ArgumentOutOfRangeException>(() => RoiScaler.DescribeFrame(1920, 1080, reference));
+#pragma warning disable CS0618 // the obsolete overloads validate the reference before delegating
+        Assert.Throws<ArgumentOutOfRangeException>(() => RoiScaler.ToFrameX(100, 1920, reference));
+        Assert.Throws<ArgumentOutOfRangeException>(() => RoiScaler.ToFrameY(100, 1080, reference));
+#pragma warning restore CS0618
     }
 }

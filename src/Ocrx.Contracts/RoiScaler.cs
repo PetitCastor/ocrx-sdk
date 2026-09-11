@@ -5,8 +5,11 @@ namespace Ocrx.Contracts;
 /// all pre-game-catalog regions were calibrated at) to actual frame pixels. The reference is
 /// treated as a canvas fitted inside the frame — uniform scale (the smaller of the two axis
 /// ratios), then centered — so a 16:9 frame lands on the same UI spots exactly as before, and any
-/// other aspect ratio letterboxes or pillarboxes with symmetric bars instead of stretching one
-/// axis independently of the other; see the banner in <see cref="DescribeFrame(int, int)"/>. A
+/// other aspect ratio letterboxes or pillarboxes instead of stretching one axis independently of
+/// the other; see the banner in <see cref="DescribeFrame(int, int)"/>. The two bars are equal when
+/// the leftover pixels are even and differ by one when they are odd — a single leftover pixel has
+/// no symmetric split, and which side keeps it falls out of <see cref="Math.Round(double)"/>'s
+/// to-even rounding of each mapped edge. A
 /// game with its own calibration passes an explicit <see cref="RoiReference"/>; every overload
 /// here falls back to <see cref="RoiReference.Default"/> when it isn't given one. Every member
 /// shares one fit computation, <see cref="FitTransform"/>, so a full-rect mapping and a
