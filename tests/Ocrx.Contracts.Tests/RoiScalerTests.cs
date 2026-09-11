@@ -133,4 +133,54 @@ public class RoiScalerTests
         // The non-16:9 case: per-axis scaling is unverified, so the banner must say so.
         Assert.Contains("WARNING", RoiScaler.DescribeFrame(3440, 1440));
     }
+
+    // Hardcoded rather than compared against the three-argument overload: that overload simply
+    // forwards here with RoiReference.Default, so comparing the two would pass no matter what the
+    // arithmetic did. These values pin the arithmetic itself.
+    //
+    // The last two rows are off-aspect and still carry today's per-axis (stretch) results. SDK-02
+    // replaces stretch with fit and must update exactly those two rows to (1704, 454, 70, 44) and
+    // (948, 400, 52, 34). The three 16:9 rows must never move — fit and stretch agree at the
+    // reference aspect, so a change there is a regression, not an intended one.
+    [Theory]
+    [InlineData(1920, 1080, 948u, 340u, 52u, 34u)]
+    [InlineData(2560, 1440, 1264u, 454u, 70u, 44u)]
+    [InlineData(3840, 2160, 1896u, 681u, 105u, 66u)]
+    [InlineData(3440, 1440, 1698u, 454u, 95u, 44u)]
+    [InlineData(1920, 1200, 948u, 378u, 52u, 37u)]
+    public void ToFrame_ExplicitDefaultReference_MapsTheCounterRoi(
+        int frameWidth, int frameHeight, uint x, uint y, uint width, uint height)
+    {
+        var roi = new RoiRect(1264, 454, 70, 44);
+
+        var scaled = RoiScaler.ToFrame(roi, frameWidth, frameHeight, RoiReference.Default);
+
+        Assert.Equal(new RoiRect(x, y, width, height), scaled);
+        // Passing the default must remain indistinguishable from omitting it.
+        Assert.Equal(RoiScaler.ToFrame(roi, frameWidth, frameHeight), scaled);
+    }
+
+    [Fact]
+    public void ToFrame_NonDefaultReference_MapsProportionally()
+    {
+        var roi = new RoiRect(100, 100, 50, 50);
+
+        var scaled = RoiScaler.ToFrame(roi, 2560, 1440, new RoiReference(1280, 720));
+
+        Assert.Equal(200u, scaled.X);
+        Assert.Equal(200u, scaled.Y);
+        Assert.Equal(100u, scaled.Width);
+        Assert.Equal(100u, scaled.Height);
+    }
+
+    [Theory]
+    [InlineData(0, 1440)]
+    [InlineData(2560, 0)]
+    [InlineData(-2560, 1440)]
+    [InlineData(2560, -1440)]
+    public void ToFrame_InvalidReference_Throws(int referenceWidth, int referenceHeight)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => RoiScaler.ToFrame(SampleRoi, 1920, 1080, new RoiReference(referenceWidth, referenceHeight)));
+    }
 }
