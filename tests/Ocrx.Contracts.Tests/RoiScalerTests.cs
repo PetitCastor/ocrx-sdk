@@ -134,30 +134,57 @@ public class RoiScalerTests
         Assert.Contains("WARNING", RoiScaler.DescribeFrame(3440, 1440));
     }
 
-    // Hardcoded rather than compared against the three-argument overload: that overload simply
+    // SignaturePlugin's counter ROI, the region this scaler exists to place correctly.
+    private static readonly RoiRect CounterRoi = new(1264, 454, 70, 44);
+
+    // Values are hardcoded rather than compared against the three-argument overload: that overload
     // forwards here with RoiReference.Default, so comparing the two would pass no matter what the
-    // arithmetic did. These values pin the arithmetic itself.
+    // arithmetic did. These pin the arithmetic itself.
     //
-    // The last two rows are off-aspect and still carry today's per-axis (stretch) results. SDK-02
-    // replaces stretch with fit and must update exactly those two rows to (1704, 454, 70, 44) and
-    // (948, 400, 52, 34). The three 16:9 rows must never move — fit and stretch agree at the
-    // reference aspect, so a change there is a regression, not an intended one.
+    // These frames are all exactly 16:9, the reference aspect. Their expected values must survive
+    // the stretch-to-fit change in SDK-02 untouched — fit and stretch agree exactly when the frame
+    // matches the reference aspect, so any movement here is a regression, never an intended change.
     [Theory]
+    [InlineData(1280, 720, 632u, 227u, 35u, 22u)]
+    [InlineData(1600, 900, 790u, 284u, 44u, 27u)]
     [InlineData(1920, 1080, 948u, 340u, 52u, 34u)]
     [InlineData(2560, 1440, 1264u, 454u, 70u, 44u)]
     [InlineData(3840, 2160, 1896u, 681u, 105u, 66u)]
-    [InlineData(3440, 1440, 1698u, 454u, 95u, 44u)]
-    [InlineData(1920, 1200, 948u, 378u, 52u, 37u)]
-    public void ToFrame_ExplicitDefaultReference_MapsTheCounterRoi(
+    [InlineData(7680, 4320, 3792u, 1362u, 210u, 132u)]
+    public void ToFrame_AtSixteenByNine_PlacesTheCounterRoiIdentically(
         int frameWidth, int frameHeight, uint x, uint y, uint width, uint height)
     {
-        var roi = new RoiRect(1264, 454, 70, 44);
-
-        var scaled = RoiScaler.ToFrame(roi, frameWidth, frameHeight, RoiReference.Default);
+        var scaled = RoiScaler.ToFrame(CounterRoi, frameWidth, frameHeight, RoiReference.Default);
 
         Assert.Equal(new RoiRect(x, y, width, height), scaled);
         // Passing the default must remain indistinguishable from omitting it.
-        Assert.Equal(RoiScaler.ToFrame(roi, frameWidth, frameHeight), scaled);
+        Assert.Equal(RoiScaler.ToFrame(CounterRoi, frameWidth, frameHeight), scaled);
+    }
+
+    // Off-aspect frames. These carry today's per-axis (stretch) results, where X and Y scale by
+    // different factors. SDK-02 replaces stretch with fit — uniform scale plus centering — and must
+    // recompute every row in this theory. It is deliberately a separate method from the 16:9 one
+    // above so that "did I change 16:9 behaviour?" is answered by which method you edited.
+    //
+    // 1366x768 earns its place: at 1.7786 it reads as 16:9 to a human and to any aspect check
+    // written against a rounded ratio, but it is not (16:9 is 1.7778), so it must letterbox.
+    [Theory]
+    [InlineData(2560, 1080, 1264u, 340u, 70u, 34u)]   // 21:9
+    [InlineData(3440, 1440, 1698u, 454u, 95u, 44u)]   // 21:9
+    [InlineData(3840, 1080, 1896u, 340u, 105u, 34u)]  // 32:9
+    [InlineData(5120, 1440, 2528u, 454u, 140u, 44u)]  // 32:9
+    [InlineData(1920, 1200, 948u, 378u, 52u, 37u)]    // 16:10
+    [InlineData(2560, 1600, 1264u, 504u, 70u, 49u)]   // 16:10
+    [InlineData(1366, 768, 674u, 242u, 38u, 24u)]     // 1.7786, near-16:9 but not
+    [InlineData(1920, 1440, 948u, 454u, 52u, 44u)]    // 4:3
+    [InlineData(1024, 768, 506u, 242u, 28u, 24u)]     // 4:3
+    public void ToFrame_OffAspect_ScalesEachAxisIndependently(
+        int frameWidth, int frameHeight, uint x, uint y, uint width, uint height)
+    {
+        var scaled = RoiScaler.ToFrame(CounterRoi, frameWidth, frameHeight, RoiReference.Default);
+
+        Assert.Equal(new RoiRect(x, y, width, height), scaled);
+        Assert.Equal(RoiScaler.ToFrame(CounterRoi, frameWidth, frameHeight), scaled);
     }
 
     [Fact]
