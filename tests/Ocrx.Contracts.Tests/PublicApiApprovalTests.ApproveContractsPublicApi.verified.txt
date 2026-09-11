@@ -84,6 +84,14 @@ namespace Ocrx.Contracts
         public uint X { get; init; }
         public uint Y { get; init; }
     }
+    public readonly struct RoiReference : System.IEquatable<Ocrx.Contracts.RoiReference>
+    {
+        public RoiReference(int Width, int Height) { }
+        public int Height { get; init; }
+        public bool IsValid { get; }
+        public int Width { get; init; }
+        public static Ocrx.Contracts.RoiReference Default { get; }
+    }
     public sealed class RoiResultException : System.Exception
     {
         public RoiResultException(string roiId, string message, bool reportedByEngine) { }
@@ -95,9 +103,27 @@ namespace Ocrx.Contracts
         public const int ReferenceHeight = 1440;
         public const int ReferenceWidth = 2560;
         public static string DescribeFrame(int frameWidth, int frameHeight) { }
+        public static string DescribeFrame(int frameWidth, int frameHeight, Ocrx.Contracts.RoiReference reference) { }
         public static Ocrx.Contracts.RoiRect ToFrame(Ocrx.Contracts.RoiRect referenceRoi, int frameWidth, int frameHeight) { }
+        public static Ocrx.Contracts.RoiRect ToFrame(Ocrx.Contracts.RoiRect referenceRoi, int frameWidth, int frameHeight, Ocrx.Contracts.RoiReference reference) { }
+        [System.Obsolete("X depends on frame height too under fit. Use ToFrameX(int, int, int), which takes" +
+            " the full frame size. This overload assumes a reference-aspect frame.")]
         public static int ToFrameX(int referenceX, int frameWidth) { }
+        [System.Obsolete("X depends on frame height too under fit. Use ToFrameX(int, int, int, RoiReference" +
+            "), which takes the full frame size. This overload assumes a reference-aspect fra" +
+            "me.")]
+        public static int ToFrameX(int referenceX, int frameWidth, Ocrx.Contracts.RoiReference reference) { }
+        public static int ToFrameX(int referenceX, int frameWidth, int frameHeight) { }
+        public static int ToFrameX(int referenceX, int frameWidth, int frameHeight, Ocrx.Contracts.RoiReference reference) { }
+        [System.Obsolete("Y depends on frame width too under fit. Use ToFrameY(int, int, int), which takes " +
+            "the full frame size. This overload assumes a reference-aspect frame.")]
         public static int ToFrameY(int referenceY, int frameHeight) { }
+        [System.Obsolete("Y depends on frame width too under fit. Use ToFrameY(int, int, int, RoiReference)" +
+            ", which takes the full frame size. This overload assumes a reference-aspect fram" +
+            "e.")]
+        public static int ToFrameY(int referenceY, int frameHeight, Ocrx.Contracts.RoiReference reference) { }
+        public static int ToFrameY(int referenceY, int frameWidth, int frameHeight) { }
+        public static int ToFrameY(int referenceY, int frameWidth, int frameHeight, Ocrx.Contracts.RoiReference reference) { }
     }
     public static class WireLimits
     {
