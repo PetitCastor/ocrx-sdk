@@ -2,12 +2,13 @@ namespace Ocrx.Contracts;
 
 /// <summary>
 /// Maps ROIs declared in reference-resolution coordinates (2560x1440 by default, the resolution
-/// all pre-game-catalog regions were calibrated at) to actual frame pixels: X/width scale with
-/// frame width, Y/height with frame height, so any 16:9 frame lands on the same UI spots. Other
-/// aspect ratios scale each axis independently, which only holds if the game UI stretches the
-/// same way — unverified, hence the warning in <see cref="DescribeFrame(int, int)"/>. A game with its own
-/// calibration passes an explicit <see cref="RoiReference"/>; every overload here falls back to
-/// <see cref="RoiReference.Default"/> when it isn't given one.
+/// all pre-game-catalog regions were calibrated at) to actual frame pixels. The reference is
+/// treated as a canvas fitted inside the frame — uniform scale (the smaller of the two axis
+/// ratios), then centered — so a 16:9 frame lands on the same UI spots exactly as before, and any
+/// other aspect ratio letterboxes or pillarboxes with symmetric bars instead of stretching one
+/// axis independently of the other; see the banner in <see cref="DescribeFrame(int, int)"/>. A
+/// game with its own calibration passes an explicit <see cref="RoiReference"/>; every overload
+/// here falls back to <see cref="RoiReference.Default"/> when it isn't given one.
 /// </summary>
 public static class RoiScaler
 {
@@ -33,14 +34,20 @@ public static class RoiScaler
         if (!reference.IsValid)
             throw new ArgumentOutOfRangeException(nameof(reference), "Reference size must be positive.");
 
-        var sx = (double)frameWidth / reference.Width;
-        var sy = (double)frameHeight / reference.Height;
+        // Uniform scale (the smaller of the two axis ratios) plus centering: the reference is a
+        // canvas fitted inside the frame, with leftover space split into symmetric bars, rather
+        // than each axis stretching independently to fill the frame.
+        var scale = Math.Min((double)frameWidth / reference.Width, (double)frameHeight / reference.Height);
+        var contentWidth = reference.Width * scale;
+        var contentHeight = reference.Height * scale;
+        var offsetX = (frameWidth - contentWidth) / 2.0;
+        var offsetY = (frameHeight - contentHeight) / 2.0;
 
         // Scale edges rather than width/height so adjacent ROIs stay adjacent after rounding.
-        var x = (uint)Math.Clamp(Math.Round(referenceRoi.X * sx), 0, Math.Max(0, frameWidth - 1));
-        var y = (uint)Math.Clamp(Math.Round(referenceRoi.Y * sy), 0, Math.Max(0, frameHeight - 1));
-        var right = (uint)Math.Clamp(Math.Round((referenceRoi.X + referenceRoi.Width) * sx), x + 1, frameWidth);
-        var bottom = (uint)Math.Clamp(Math.Round((referenceRoi.Y + referenceRoi.Height) * sy), y + 1, frameHeight);
+        var x = (uint)Math.Clamp(Math.Round(offsetX + referenceRoi.X * scale), 0, Math.Max(0, frameWidth - 1));
+        var y = (uint)Math.Clamp(Math.Round(offsetY + referenceRoi.Y * scale), 0, Math.Max(0, frameHeight - 1));
+        var right = (uint)Math.Clamp(Math.Round(offsetX + (referenceRoi.X + referenceRoi.Width) * scale), x + 1, frameWidth);
+        var bottom = (uint)Math.Clamp(Math.Round(offsetY + (referenceRoi.Y + referenceRoi.Height) * scale), y + 1, frameHeight);
 
         return new RoiRect(x, y, right - x, bottom - y);
     }
@@ -84,12 +91,18 @@ public static class RoiScaler
         if (frameWidth == reference.Width && frameHeight == reference.Height)
             return $"capture {frameWidth}x{frameHeight} (reference resolution, ROIs used 1:1)";
 
-        var sx = (double)frameWidth / reference.Width;
-        var sy = (double)frameHeight / reference.Height;
-        var text = $"capture {frameWidth}x{frameHeight}, ROIs scaled x{sx:0.###} / y{sy:0.###}";
+        // One uniform factor, not two: fit scales both axes by the smaller ratio and absorbs the
+        // difference into the centering offset. Reporting the axis ratios separately would describe
+        // a per-axis distortion that no longer happens.
+        var scale = Math.Min((double)frameWidth / reference.Width, (double)frameHeight / reference.Height);
+        var text = $"capture {frameWidth}x{frameHeight}, ROIs scaled x{scale:0.###}";
 
         if (frameWidth * (long)reference.Height != frameHeight * (long)reference.Width)
-            text += " — WARNING: aspect ratio differs from the 16:9 reference; ROI positions are unverified";
+        {
+            var barX = (frameWidth - reference.Width * scale) / 2.0;
+            var barY = (frameHeight - reference.Height * scale) / 2.0;
+            text += $" — off-aspect: reference fitted and centered ({barX:0.#}px pillarbox, {barY:0.#}px letterbox)";
+        }
         return text;
     }
 }
