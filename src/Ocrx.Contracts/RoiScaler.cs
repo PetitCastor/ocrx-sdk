@@ -8,7 +8,9 @@ namespace Ocrx.Contracts;
 /// other aspect ratio letterboxes or pillarboxes with symmetric bars instead of stretching one
 /// axis independently of the other; see the banner in <see cref="DescribeFrame(int, int)"/>. A
 /// game with its own calibration passes an explicit <see cref="RoiReference"/>; every overload
-/// here falls back to <see cref="RoiReference.Default"/> when it isn't given one.
+/// here falls back to <see cref="RoiReference.Default"/> when it isn't given one. Every member
+/// shares one fit computation, <see cref="FitTransform"/>, so a full-rect mapping and a
+/// single-axis one can never disagree.
 /// </summary>
 public static class RoiScaler
 {
@@ -37,46 +39,97 @@ public static class RoiScaler
         // Uniform scale (the smaller of the two axis ratios) plus centering: the reference is a
         // canvas fitted inside the frame, with leftover space split into symmetric bars, rather
         // than each axis stretching independently to fill the frame.
-        var scale = Math.Min((double)frameWidth / reference.Width, (double)frameHeight / reference.Height);
-        var contentWidth = reference.Width * scale;
-        var contentHeight = reference.Height * scale;
-        var offsetX = (frameWidth - contentWidth) / 2.0;
-        var offsetY = (frameHeight - contentHeight) / 2.0;
+        var fit = FitTransform.For(frameWidth, frameHeight, reference);
 
         // Scale edges rather than width/height so adjacent ROIs stay adjacent after rounding.
-        var x = (uint)Math.Clamp(Math.Round(offsetX + referenceRoi.X * scale), 0, Math.Max(0, frameWidth - 1));
-        var y = (uint)Math.Clamp(Math.Round(offsetY + referenceRoi.Y * scale), 0, Math.Max(0, frameHeight - 1));
-        var right = (uint)Math.Clamp(Math.Round(offsetX + (referenceRoi.X + referenceRoi.Width) * scale), x + 1, frameWidth);
-        var bottom = (uint)Math.Clamp(Math.Round(offsetY + (referenceRoi.Y + referenceRoi.Height) * scale), y + 1, frameHeight);
+        var x = (uint)Math.Clamp(Math.Round(fit.MapX(referenceRoi.X)), 0, Math.Max(0, frameWidth - 1));
+        var y = (uint)Math.Clamp(Math.Round(fit.MapY(referenceRoi.Y)), 0, Math.Max(0, frameHeight - 1));
+        var right = (uint)Math.Clamp(Math.Round(fit.MapX(referenceRoi.X + referenceRoi.Width)), x + 1, frameWidth);
+        var bottom = (uint)Math.Clamp(Math.Round(fit.MapY(referenceRoi.Y + referenceRoi.Height)), y + 1, frameHeight);
 
         return new RoiRect(x, y, right - x, bottom - y);
     }
 
     /// <summary>Scales a reference-space X coordinate (e.g. a pixel sample column) to frame space.</summary>
+    /// <remarks>
+    /// Under fit, X depends on frame height too — the scale is the smaller of the two axis ratios
+    /// and X carries a centering offset whenever the frame is width-bound. This overload cannot see
+    /// <paramref name="frameWidth"/>'s companion height, so it assumes a reference-aspect frame
+    /// (implying the height from <paramref name="frameWidth"/>), which is exactly correct for 16:9
+    /// callers and silently wrong for any other aspect.
+    /// </remarks>
+    [Obsolete("X depends on frame height too under fit. Use ToFrameX(int, int, int), which takes the " +
+        "full frame size. This overload assumes a reference-aspect frame.")]
     public static int ToFrameX(int referenceX, int frameWidth)
         => ToFrameX(referenceX, frameWidth, RoiReference.Default);
 
-    /// <summary>Scales a <paramref name="reference"/>-space X coordinate to frame space.</summary>
+    /// <summary>Scales a <paramref name="reference"/>-space X coordinate to frame space, assuming a reference-aspect frame.</summary>
+    /// <remarks>See the remarks on <see cref="ToFrameX(int, int)"/>.</remarks>
+    [Obsolete("X depends on frame height too under fit. Use ToFrameX(int, int, int, RoiReference), " +
+        "which takes the full frame size. This overload assumes a reference-aspect frame.")]
     public static int ToFrameX(int referenceX, int frameWidth, RoiReference reference)
     {
         if (!reference.IsValid)
             throw new ArgumentOutOfRangeException(nameof(reference), "Reference size must be positive.");
 
-        return (int)Math.Round((double)referenceX * frameWidth / reference.Width);
+        return ToFrameX(referenceX, frameWidth, ImpliedFrameHeight(frameWidth, reference), reference);
+    }
+
+    /// <summary>Scales a reference-space X coordinate to frame space.</summary>
+    public static int ToFrameX(int referenceX, int frameWidth, int frameHeight)
+        => ToFrameX(referenceX, frameWidth, frameHeight, RoiReference.Default);
+
+    /// <summary>Scales a <paramref name="reference"/>-space X coordinate to frame space.</summary>
+    public static int ToFrameX(int referenceX, int frameWidth, int frameHeight, RoiReference reference)
+    {
+        if (!reference.IsValid)
+            throw new ArgumentOutOfRangeException(nameof(reference), "Reference size must be positive.");
+
+        var fit = FitTransform.For(frameWidth, frameHeight, reference);
+        return (int)Math.Round(fit.MapX(referenceX));
     }
 
     /// <summary>Scales a reference-space Y coordinate to frame space.</summary>
+    /// <remarks>See the remarks on <see cref="ToFrameX(int, int)"/>; the same reasoning applies to Y
+    /// and frame width.</remarks>
+    [Obsolete("Y depends on frame width too under fit. Use ToFrameY(int, int, int), which takes the " +
+        "full frame size. This overload assumes a reference-aspect frame.")]
     public static int ToFrameY(int referenceY, int frameHeight)
         => ToFrameY(referenceY, frameHeight, RoiReference.Default);
 
-    /// <summary>Scales a <paramref name="reference"/>-space Y coordinate to frame space.</summary>
+    /// <summary>Scales a <paramref name="reference"/>-space Y coordinate to frame space, assuming a reference-aspect frame.</summary>
+    /// <remarks>See the remarks on <see cref="ToFrameY(int, int)"/>.</remarks>
+    [Obsolete("Y depends on frame width too under fit. Use ToFrameY(int, int, int, RoiReference), " +
+        "which takes the full frame size. This overload assumes a reference-aspect frame.")]
     public static int ToFrameY(int referenceY, int frameHeight, RoiReference reference)
     {
         if (!reference.IsValid)
             throw new ArgumentOutOfRangeException(nameof(reference), "Reference size must be positive.");
 
-        return (int)Math.Round((double)referenceY * frameHeight / reference.Height);
+        return ToFrameY(referenceY, ImpliedFrameWidth(frameHeight, reference), frameHeight, reference);
     }
+
+    /// <summary>Scales a reference-space Y coordinate to frame space.</summary>
+    public static int ToFrameY(int referenceY, int frameWidth, int frameHeight)
+        => ToFrameY(referenceY, frameWidth, frameHeight, RoiReference.Default);
+
+    /// <summary>Scales a <paramref name="reference"/>-space Y coordinate to frame space.</summary>
+    public static int ToFrameY(int referenceY, int frameWidth, int frameHeight, RoiReference reference)
+    {
+        if (!reference.IsValid)
+            throw new ArgumentOutOfRangeException(nameof(reference), "Reference size must be positive.");
+
+        var fit = FitTransform.For(frameWidth, frameHeight, reference);
+        return (int)Math.Round(fit.MapY(referenceY));
+    }
+
+    /// <summary>The frame height implied by a reference-aspect frame of the given width.</summary>
+    private static int ImpliedFrameHeight(int frameWidth, RoiReference reference)
+        => (int)Math.Round(frameWidth * (double)reference.Height / reference.Width);
+
+    /// <summary>The frame width implied by a reference-aspect frame of the given height.</summary>
+    private static int ImpliedFrameWidth(int frameHeight, RoiReference reference)
+        => (int)Math.Round(frameHeight * (double)reference.Width / reference.Height);
 
     /// <summary>One-line description of the capture size and how ROIs will be mapped to it.</summary>
     public static string DescribeFrame(int frameWidth, int frameHeight)
@@ -93,16 +146,13 @@ public static class RoiScaler
 
         // One uniform factor, not two: fit scales both axes by the smaller ratio and absorbs the
         // difference into the centering offset. Reporting the axis ratios separately would describe
-        // a per-axis distortion that no longer happens.
-        var scale = Math.Min((double)frameWidth / reference.Width, (double)frameHeight / reference.Height);
-        var text = $"capture {frameWidth}x{frameHeight}, ROIs scaled x{scale:0.###}";
+        // a per-axis distortion that no longer happens. Same FitTransform as ToFrame and the axis
+        // helpers, so this can't drift back to reporting two ratios the way SDK-02's review caught.
+        var fit = FitTransform.For(frameWidth, frameHeight, reference);
+        var text = $"capture {frameWidth}x{frameHeight}, ROIs scaled x{fit.Scale:0.###}";
 
         if (frameWidth * (long)reference.Height != frameHeight * (long)reference.Width)
-        {
-            var barX = (frameWidth - reference.Width * scale) / 2.0;
-            var barY = (frameHeight - reference.Height * scale) / 2.0;
-            text += $" — off-aspect: reference fitted and centered ({barX:0.#}px pillarbox, {barY:0.#}px letterbox)";
-        }
+            text += $" — off-aspect: reference fitted and centered ({fit.OffsetX:0.#}px pillarbox, {fit.OffsetY:0.#}px letterbox)";
         return text;
     }
 }

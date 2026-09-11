@@ -106,10 +106,24 @@ namespace Ocrx.Contracts
         public static string DescribeFrame(int frameWidth, int frameHeight, Ocrx.Contracts.RoiReference reference) { }
         public static Ocrx.Contracts.RoiRect ToFrame(Ocrx.Contracts.RoiRect referenceRoi, int frameWidth, int frameHeight) { }
         public static Ocrx.Contracts.RoiRect ToFrame(Ocrx.Contracts.RoiRect referenceRoi, int frameWidth, int frameHeight, Ocrx.Contracts.RoiReference reference) { }
+        [System.Obsolete("X depends on frame height too under fit. Use ToFrameX(int, int, int), which takes" +
+            " the full frame size. This overload assumes a reference-aspect frame.")]
         public static int ToFrameX(int referenceX, int frameWidth) { }
+        [System.Obsolete("X depends on frame height too under fit. Use ToFrameX(int, int, int, RoiReference" +
+            "), which takes the full frame size. This overload assumes a reference-aspect fra" +
+            "me.")]
         public static int ToFrameX(int referenceX, int frameWidth, Ocrx.Contracts.RoiReference reference) { }
+        public static int ToFrameX(int referenceX, int frameWidth, int frameHeight) { }
+        public static int ToFrameX(int referenceX, int frameWidth, int frameHeight, Ocrx.Contracts.RoiReference reference) { }
+        [System.Obsolete("Y depends on frame width too under fit. Use ToFrameY(int, int, int), which takes " +
+            "the full frame size. This overload assumes a reference-aspect frame.")]
         public static int ToFrameY(int referenceY, int frameHeight) { }
+        [System.Obsolete("Y depends on frame width too under fit. Use ToFrameY(int, int, int, RoiReference)" +
+            ", which takes the full frame size. This overload assumes a reference-aspect fram" +
+            "e.")]
         public static int ToFrameY(int referenceY, int frameHeight, Ocrx.Contracts.RoiReference reference) { }
+        public static int ToFrameY(int referenceY, int frameWidth, int frameHeight) { }
+        public static int ToFrameY(int referenceY, int frameWidth, int frameHeight, Ocrx.Contracts.RoiReference reference) { }
     }
     public static class WireLimits
     {

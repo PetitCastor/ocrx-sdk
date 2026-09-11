@@ -100,15 +100,21 @@ public class RoiScalerTests
     public void ToFrameX_ScalesReferenceColumn()
     {
         // The point-scaling overloads the pixel-strip ROIs use; the identity case has to survive
-        // the same shortcut ToFrame takes.
+        // the same shortcut ToFrame takes. Deliberately exercises the obsolete width-only overload
+        // (SDK-03): it must keep returning these exact values, because it assumes a reference-aspect
+        // frame and both frames here are 16:9.
+#pragma warning disable CS0618 // obsolete-by-design: pinning the width-only overload's behaviour
         Assert.Equal(798, RoiScaler.ToFrameX(1064, 1920));
         Assert.Equal(1064, RoiScaler.ToFrameX(1064, RoiScaler.ReferenceWidth));
+#pragma warning restore CS0618
     }
 
     [Fact]
     public void ToFrameY_ScalesReferenceRow()
     {
+#pragma warning disable CS0618 // obsolete-by-design: pinning the width-only overload's behaviour
         Assert.Equal(480, RoiScaler.ToFrameY(640, 1080));
+#pragma warning restore CS0618
     }
 
     [Fact]
@@ -282,5 +288,120 @@ public class RoiScalerTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(
             () => RoiScaler.ToFrame(SampleRoi, 1920, 1080, new RoiReference(referenceWidth, referenceHeight)));
+    }
+
+    // SDK-03: the fit-aware full-frame axis helpers.
+    //
+    // The agreement and round-trip theories below deliberately mix the six 16:9 frames with the
+    // nine off-aspect ones from ToFrame_OffAspect_FitsAndCentersTheCounterRoi (21:9, 32:9, 16:10,
+    // near-16:9, 4:3). At exactly 16:9 fit and the old per-axis stretch agree, so a 16:9-only theory
+    // would pass against either implementation and prove nothing about the fit behaviour this task
+    // adds. The off-aspect rows are the ones that fail under stretch: see the reasoning on each
+    // theory below for the specific case that would have caught it.
+    //
+    // The obsolete-overload theory stays 16:9-only (below) — its documented contract *is* a
+    // reference-aspect frame, so off-aspect frames are out of its contract, not a gap in its test.
+
+    [Theory]
+    [InlineData(1280, 720)]
+    [InlineData(1600, 900)]
+    [InlineData(1920, 1080)]
+    [InlineData(2560, 1440)]
+    [InlineData(3840, 2160)]
+    [InlineData(7680, 4320)]
+    [InlineData(2560, 1080)]   // 21:9
+    [InlineData(3440, 1440)]   // 21:9
+    [InlineData(3840, 1080)]   // 32:9
+    [InlineData(5120, 1440)]   // 32:9
+    [InlineData(1920, 1200)]   // 16:10
+    [InlineData(2560, 1600)]   // 16:10
+    [InlineData(1366, 768)]    // 1.7786, near-16:9 but not
+    [InlineData(1920, 1440)]   // 4:3
+    [InlineData(1024, 768)]    // 4:3
+    public void ToFrameXY_FullFrame_AgreesWithToFrameOnSameRoi(int frameWidth, int frameHeight)
+    {
+        // ToFrameX/ToFrameY now go through the same FitTransform as ToFrame, so mapping a corner
+        // via the axis helpers must land on exactly the pixel ToFrame places that corner at.
+        //
+        // This is the theory that catches a regression back to per-axis stretch: at 3440x1440,
+        // ToFrame (fit) places CounterRoi.X at 1704, but the old stretch formula
+        // (referenceX * frameWidth / reference.Width, ignoring height entirely) gives
+        // round(1264 * 3440 / 2560) = round(1698.5) = 1698 — Math.Round defaults to
+        // MidpointRounding.ToEven, so the exact .5 rounds down to the even 1698, not up — a 6px
+        // miss that fails the assertion below. Every 16:9 row in this theory would pass unchanged
+        // under either implementation.
+        var scaledRoi = RoiScaler.ToFrame(CounterRoi, frameWidth, frameHeight);
+
+        var x = RoiScaler.ToFrameX((int)CounterRoi.X, frameWidth, frameHeight);
+        var y = RoiScaler.ToFrameY((int)CounterRoi.Y, frameWidth, frameHeight);
+
+        Assert.Equal((int)scaledRoi.X, x);
+        Assert.Equal((int)scaledRoi.Y, y);
+    }
+
+    [Theory]
+    [InlineData(1280, 720, 632, 227)]
+    [InlineData(1600, 900, 790, 284)]
+    [InlineData(1920, 1080, 948, 340)]
+    [InlineData(2560, 1440, 1264, 454)]
+    [InlineData(3840, 2160, 1896, 681)]
+    [InlineData(7680, 4320, 3792, 1362)]
+    public void ObsoleteToFrameXY_KeepsSdk02SixteenByNineValues(
+        int frameWidth, int frameHeight, int expectedX, int expectedY)
+    {
+        // The width-only overloads are obsolete, not gone: a caller who never updates keeps getting
+        // the pre-SDK-03 answer for every 16:9 frame, because the implied-height delegation is exact
+        // at the reference aspect.
+#pragma warning disable CS0618 // deliberately exercising the obsolete overload
+        var x = RoiScaler.ToFrameX((int)CounterRoi.X, frameWidth);
+        var y = RoiScaler.ToFrameY((int)CounterRoi.Y, frameHeight);
+#pragma warning restore CS0618
+
+        Assert.Equal(expectedX, x);
+        Assert.Equal(expectedY, y);
+    }
+
+    [Theory]
+    [InlineData(1280, 720)]
+    [InlineData(1600, 900)]
+    [InlineData(1920, 1080)]
+    [InlineData(2560, 1440)]
+    [InlineData(3840, 2160)]
+    [InlineData(7680, 4320)]
+    [InlineData(2560, 1080)]   // 21:9
+    [InlineData(3440, 1440)]   // 21:9
+    [InlineData(3840, 1080)]   // 32:9
+    [InlineData(5120, 1440)]   // 32:9
+    [InlineData(1920, 1200)]   // 16:10
+    [InlineData(2560, 1600)]   // 16:10
+    [InlineData(1366, 768)]    // 1.7786, near-16:9 but not
+    [InlineData(1920, 1440)]   // 4:3
+    [InlineData(1024, 768)]    // 4:3
+    public void ToFrameXY_FullFrame_RoundTripsWithinOnePixel(int frameWidth, int frameHeight)
+    {
+        // General fit inversion — the uniform scale is the smaller of the two axis ratios, with a
+        // centering offset whenever the frame isn't the reference aspect (both zero at 16:9, where
+        // this collapses to the simple scale-only inversion). Computed independently of RoiScaler's
+        // own arithmetic, using only the reference constants and frame size, so this also catches a
+        // regression in the axis helpers' *offset* handling, not only their scale.
+        //
+        // At 3440x1440 this is the theory that catches a regression back to per-axis stretch: the
+        // old ToFrameX gives 1698 (see the reasoning on ToFrameXY_FullFrame_AgreesWithToFrameOnSameRoi),
+        // which inverts back to (1698 - 440) / 1 = 1258 — 6px off from CounterRoi.X (1264), failing
+        // the <= 1 assertion below. Every 16:9 row would round-trip cleanly under either
+        // implementation.
+        var scale = Math.Min(
+            (double)frameWidth / RoiScaler.ReferenceWidth, (double)frameHeight / RoiScaler.ReferenceHeight);
+        var offsetX = (frameWidth - RoiScaler.ReferenceWidth * scale) / 2.0;
+        var offsetY = (frameHeight - RoiScaler.ReferenceHeight * scale) / 2.0;
+
+        var frameX = RoiScaler.ToFrameX((int)CounterRoi.X, frameWidth, frameHeight);
+        var frameY = RoiScaler.ToFrameY((int)CounterRoi.Y, frameWidth, frameHeight);
+
+        var roundTrippedX = (frameX - offsetX) / scale;
+        var roundTrippedY = (frameY - offsetY) / scale;
+
+        Assert.True(Math.Abs(roundTrippedX - CounterRoi.X) <= 1);
+        Assert.True(Math.Abs(roundTrippedY - CounterRoi.Y) <= 1);
     }
 }
