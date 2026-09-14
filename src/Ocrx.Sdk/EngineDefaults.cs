@@ -7,7 +7,7 @@ namespace Ocrx.Sdk;
 /// </summary>
 /// <remarks>
 /// Every value here was a literal copied into a plugin at some point — the pipe name in a config
-/// default, 2560x1440 in a ROI table, "500 ms so three ticks is 1.5 s" in a debounce comment. The
+/// default, 2560x1440 in a ROI table, "250 ms so three ticks is 0.75 s" in a debounce comment. The
 /// values themselves live in <see cref="Ocrx.Contracts"/> where they are also the wire's business;
 /// this class re-exports rather than restates them, so there is still exactly one definition.
 /// <para>
@@ -36,7 +36,7 @@ public static class EngineDefaults
     /// Cadence a stock engine scans at. What a plugin counting ticks should assume only until
     /// <see cref="EngineInfo.ScanInterval"/> tells it what this engine really does.
     /// </summary>
-    public static readonly TimeSpan DefaultScanInterval = TimeSpan.FromMilliseconds(500);
+    public static readonly TimeSpan DefaultScanInterval = TimeSpan.FromMilliseconds(250);
 
     /// <summary>
     /// The most BGRA a single <see cref="RoiKind.Pixels"/> region may carry on one tick. A region

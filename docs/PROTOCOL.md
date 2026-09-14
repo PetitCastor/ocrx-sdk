@@ -106,7 +106,7 @@ recording a new one, see [`docs/COMPATIBILITY.md`](COMPATIBILITY.md).
   `TickData.Status` / `TryGetText`, whose `false` cannot be mistaken for a reading the way `""` can.
 - **`StatusResponse.scan_interval_ms = 0` means "engine older than this field"**, not a zero-length
   cadence. The value is the interval the scan loop actually sleeps for, after the engine's own
-  minimum clamp — so a plugin expressing a debounce in ticks reads it instead of assuming 500 ms.
+  minimum clamp — so a plugin expressing a debounce in ticks reads it instead of assuming 250 ms.
   `EngineInfo.ScanInterval` falls back to `EngineDefaults.DefaultScanInterval` on the zero.
 
 ## Coordinate spaces
@@ -144,8 +144,8 @@ or two subscriptions.
 
 ## Backpressure and stream end
 
-Each subscription has a bounded outbound channel of **4 ticks** (`ClientSubscription.cs:18`, ~2 s at the
-default 500 ms cadence). The overflow policy depends on the frame source:
+Each subscription has a bounded outbound channel of **4 ticks** (`ClientSubscription.cs:18`, ~1 s at the
+default 250 ms cadence). The overflow policy depends on the frame source:
 
 | Mode | Policy | Why |
 | --- | --- | --- |
