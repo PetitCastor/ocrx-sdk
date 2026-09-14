@@ -80,8 +80,12 @@ public sealed class OverlayRecordSink : IRecordSink
             throw new ArgumentOutOfRangeException(nameof(options), "overlay font size must be positive");
         if (options.BackgroundAlpha is < 0 or > 255)
             throw new ArgumentOutOfRangeException(nameof(options), "overlay background alpha must be 0..255");
+        if (options.BorderWidth < 0)
+            throw new ArgumentOutOfRangeException(nameof(options), "overlay border width cannot be negative");
         if (options.CornerRadius < 0)
             throw new ArgumentOutOfRangeException(nameof(options), "overlay corner radius cannot be negative");
+        if (options.CornerAccentLength < 0)
+            throw new ArgumentOutOfRangeException(nameof(options), "overlay corner accent length cannot be negative");
         if (options.Padding < 0)
             throw new ArgumentOutOfRangeException(nameof(options), "overlay padding cannot be negative");
         if (options.LingerMs < 0)

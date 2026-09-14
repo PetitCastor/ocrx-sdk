@@ -146,8 +146,12 @@ namespace Ocrx.Sdk
         public Ocrx.Sdk.OverlayAnchor Anchor { get; set; }
         public int BackgroundAlpha { get; set; }
         public string BackgroundColor { get; set; }
+        public string? BorderColor { get; set; }
+        public int BorderWidth { get; set; }
+        public int CornerAccentLength { get; set; }
         public int CornerRadius { get; set; }
         public string FontFamily { get; set; }
+        public string? FontFile { get; set; }
         public float FontSize { get; set; }
         public string ForegroundColor { get; set; }
         public int Height { get; set; }
@@ -156,6 +160,7 @@ namespace Ocrx.Sdk
         public int OffsetY { get; set; }
         public int Padding { get; set; }
         public string Template { get; set; }
+        public bool UsePixelText { get; set; }
         public int Width { get; set; }
         public int X { get; set; }
         public int Y { get; set; }

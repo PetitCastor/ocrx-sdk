@@ -44,6 +44,9 @@ internal sealed class Win32OverlayWindow : IOverlayWindow
     private readonly IPluginOutput _log;
     private readonly Color _foreground;
     private readonly Color _background;
+    private readonly Color? _border;
+    private readonly PrivateFontCollection? _privateFonts;
+    private readonly FontFamily? _fontFamily;
     private readonly ManualResetEventSlim _ready = new();
     private readonly LingerTimerState _lingerTimer = new();
     private Thread? _thread;
@@ -66,6 +69,10 @@ internal sealed class Win32OverlayWindow : IOverlayWindow
         _log = log;
         _foreground = ParseColor(options.ForegroundColor, nameof(options.ForegroundColor));
         _background = ParseColor(options.BackgroundColor, nameof(options.BackgroundColor));
+        _border = string.IsNullOrWhiteSpace(options.BorderColor)
+            ? null
+            : ParseColor(options.BorderColor, nameof(options.BorderColor));
+        (_privateFonts, _fontFamily) = LoadFont(options.FontFile);
     }
 
     public void Start()
@@ -118,7 +125,10 @@ internal sealed class Win32OverlayWindow : IOverlayWindow
             || thread == Thread.CurrentThread
             || thread.Join(TimeSpan.FromSeconds(10));
         if (stopped)
+        {
+            _privateFonts?.Dispose();
             _ready.Dispose();
+        }
         else
             _log.WriteLine("overlay window did not stop within 10 seconds");
     }
@@ -284,7 +294,7 @@ internal sealed class Win32OverlayWindow : IOverlayWindow
         using (var path = RoundedRectangle(_options.Width, _options.Height, _options.CornerRadius))
         using (var background = new SolidBrush(Color.FromArgb(_options.BackgroundAlpha, _background)))
         using (var foreground = new SolidBrush(_foreground))
-        using (var font = new Font(_options.FontFamily, _options.FontSize, FontStyle.Regular, GraphicsUnit.Point))
+        using (var font = CreateFont())
         using (var format = new StringFormat
         {
             Alignment = StringAlignment.Center,
@@ -295,8 +305,11 @@ internal sealed class Win32OverlayWindow : IOverlayWindow
             graphics.Clear(Color.Transparent);
             graphics.CompositingMode = CompositingMode.SourceOver;
             graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            graphics.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+            graphics.TextRenderingHint = _options.UsePixelText
+                ? TextRenderingHint.SingleBitPerPixelGridFit
+                : TextRenderingHint.AntiAliasGridFit;
             graphics.FillPath(background, path);
+            DrawBorder(graphics);
 
             var padding = _options.Padding;
             var textBounds = new RectangleF(
@@ -375,26 +388,88 @@ internal sealed class Win32OverlayWindow : IOverlayWindow
             _options.Y);
     }
 
+    private Font CreateFont() => _fontFamily is null
+        ? new Font(_options.FontFamily, _options.FontSize, FontStyle.Regular, GraphicsUnit.Point)
+        : new Font(_fontFamily, _options.FontSize, FontStyle.Regular, GraphicsUnit.Point);
+
+    private void DrawBorder(Graphics graphics)
+    {
+        if (_border is not { } border || _options.BorderWidth == 0)
+            return;
+
+        var width = Math.Min(_options.BorderWidth, Math.Min(_options.Width, _options.Height));
+        var inset = width / 2f;
+        using var pen = new Pen(border, width);
+        using var path = RoundedRectangle(
+            (int)Math.Ceiling(inset),
+            (int)Math.Ceiling(inset),
+            Math.Max(1, _options.Width - (int)Math.Ceiling(inset * 2)),
+            Math.Max(1, _options.Height - (int)Math.Ceiling(inset * 2)),
+            Math.Max(0, _options.CornerRadius - (int)Math.Ceiling(inset)));
+        graphics.DrawPath(pen, path);
+
+        if (_options.CornerAccentLength == 0)
+            return;
+
+        var accent = Math.Min(_options.CornerAccentLength, Math.Min(_options.Width, _options.Height) / 2);
+        var left = inset;
+        var top = inset;
+        var right = _options.Width - inset;
+        var bottom = _options.Height - inset;
+        graphics.DrawLine(pen, left + accent, top, left, top + accent);
+        graphics.DrawLine(pen, right - accent, top, right, top + accent);
+        graphics.DrawLine(pen, left, bottom - accent, left + accent, bottom);
+        graphics.DrawLine(pen, right, bottom - accent, right - accent, bottom);
+    }
+
     private static GraphicsPath RoundedRectangle(int width, int height, int radius)
+    {
+        return RoundedRectangle(0, 0, width, height, radius);
+    }
+
+    private static GraphicsPath RoundedRectangle(int x, int y, int width, int height, int radius)
     {
         var path = new GraphicsPath();
         var diameter = Math.Min(radius * 2, Math.Min(width, height));
         if (diameter <= 0)
         {
-            path.AddRectangle(new Rectangle(0, 0, width, height));
+            path.AddRectangle(new Rectangle(x, y, width, height));
             return path;
         }
 
-        var arc = new Rectangle(0, 0, diameter, diameter);
+        var arc = new Rectangle(x, y, diameter, diameter);
         path.AddArc(arc, 180, 90);
-        arc.X = width - diameter;
+        arc.X = x + width - diameter;
         path.AddArc(arc, 270, 90);
-        arc.Y = height - diameter;
+        arc.Y = y + height - diameter;
         path.AddArc(arc, 0, 90);
-        arc.X = 0;
+        arc.X = x;
         path.AddArc(arc, 90, 90);
         path.CloseFigure();
         return path;
+    }
+
+    private static (PrivateFontCollection? Collection, FontFamily? Family) LoadFont(string? fontFile)
+    {
+        if (string.IsNullOrWhiteSpace(fontFile))
+            return (null, null);
+        if (!File.Exists(fontFile))
+            throw new FileNotFoundException("overlay font file was not found", fontFile);
+
+        var collection = new PrivateFontCollection();
+        try
+        {
+            collection.AddFontFile(fontFile);
+            var family = collection.Families.SingleOrDefault();
+            if (family is null)
+                throw new ArgumentException("overlay font file contains no usable font family", nameof(fontFile));
+            return (collection, family);
+        }
+        catch
+        {
+            collection.Dispose();
+            throw;
+        }
     }
 
     private static void PremultiplyAlpha(Bitmap bitmap)

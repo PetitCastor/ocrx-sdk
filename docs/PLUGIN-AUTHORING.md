@@ -277,6 +277,11 @@ are resolution-relative to the primary screen, and `offsetX`/`offsetY` still app
 is a topmost, click-through, no-activate Windows window: it never inspects the game process and never
 requires elevation. A `Cleared` record hides it; `lingerMs: 0` disables auto-hide.
 
+Set `fontFile` to a plugin-packaged `.ttf` or `.otf` when the text must not depend on a machine-installed
+font. `usePixelText` switches to one-bit pixel rendering. An optional `borderColor` plus positive
+`borderWidth` draws an outline; `cornerAccentLength` adds short diagonal tabs at its corners. Omit
+those styling keys to retain the original filled pill.
+
 Unlike the file and HTTP sinks, the overlay receives every observation and clear so the on-screen
 state stays current; it is intentionally not change-deduplicated.
 
