@@ -87,6 +87,22 @@ public class OverlayRecordSinkTests
         Assert.Equal(0, window.StartCount);
     }
 
+    [Theory]
+    [InlineData(-1, 0)]
+    [InlineData(0, -1)]
+    public void NegativeBorderStyleValues_ThrowBeforeTheWindowStarts(int borderWidth, int cornerAccentLength)
+    {
+        var window = new FakeOverlayWindow();
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new OverlayRecordSink(new OverlaySpec
+            {
+                BorderWidth = borderWidth,
+                CornerAccentLength = cornerAccentLength,
+            }, window));
+        Assert.Equal(0, window.StartCount);
+    }
+
     private static CaptureRecord Record(string rawText,
         IReadOnlyDictionary<string, string>? fields = null)
         => new(DateTime.UnixEpoch, "refinery", TriggerKind.Auto, rawText) { Fields = fields };

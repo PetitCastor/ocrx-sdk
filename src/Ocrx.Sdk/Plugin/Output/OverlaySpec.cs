@@ -30,8 +30,17 @@ public sealed class OverlaySpec
     /// <summary>Installed font family used for the observation text.</summary>
     public string FontFamily { get; set; } = "Segoe UI";
 
+    /// <summary>
+    /// Optional path to a TrueType or OpenType font file used for the observation text.
+    /// When set, the overlay loads the font privately instead of requiring it to be installed.
+    /// </summary>
+    public string? FontFile { get; set; }
+
     /// <summary>Font size in points.</summary>
     public float FontSize { get; set; } = 24;
+
+    /// <summary>Render text with one-bit pixel edges instead of anti-aliasing.</summary>
+    public bool UsePixelText { get; set; }
 
     /// <summary>Foreground colour as a named colour or HTML hex value.</summary>
     public string ForegroundColor { get; set; } = "#FFFFFF";
@@ -42,8 +51,17 @@ public sealed class OverlaySpec
     /// <summary>Background alpha from 0 (transparent) to 255 (opaque).</summary>
     public int BackgroundAlpha { get; set; } = 224;
 
+    /// <summary>Optional outline colour as a named colour or HTML hex value.</summary>
+    public string? BorderColor { get; set; }
+
+    /// <summary>Outline width in physical pixels. Zero disables the outline.</summary>
+    public int BorderWidth { get; set; }
+
     /// <summary>Rounded pill corner radius in physical pixels.</summary>
     public int CornerRadius { get; set; } = 16;
+
+    /// <summary>Length in physical pixels of diagonal accents drawn at each outlined corner.</summary>
+    public int CornerAccentLength { get; set; }
 
     /// <summary>Inset between the pill edge and text in physical pixels.</summary>
     public int Padding { get; set; } = 16;

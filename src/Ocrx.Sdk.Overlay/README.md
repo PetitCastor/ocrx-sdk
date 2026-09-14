@@ -31,3 +31,11 @@ Reference that manifest from the plugin project:
 
 The window never reads or modifies the game process, never requests elevation, and uses
 `WS_EX_TRANSPARENT` plus `WS_EX_NOACTIVATE` so mouse and keyboard focus stay with the game.
+
+## Styling
+
+`OverlaySpec` supports installed fonts through `fontFamily`, or a plugin-packaged TrueType/OpenType
+font through `fontFile`. A font file is loaded privately by the overlay process, so it does not need
+to be installed on the player's system. `usePixelText` selects one-bit pixel rendering for bitmap-style
+fonts. `borderColor`, `borderWidth`, and `cornerAccentLength` add an optional outline with diagonal
+corner accents; leaving them unset preserves the original filled-pill appearance.
