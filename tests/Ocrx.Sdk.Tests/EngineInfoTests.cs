@@ -11,6 +11,10 @@ namespace Ocrx.Sdk.Tests;
 public class EngineInfoTests
 {
     [Fact]
+    public void DefaultScanInterval_Is250Milliseconds()
+        => Assert.Equal(TimeSpan.FromMilliseconds(250), EngineDefaults.DefaultScanInterval);
+
+    [Fact]
     public void From_CopiesWhatTheEngineReported()
     {
         var status = new StatusResponse

@@ -209,7 +209,7 @@ message StatusResponse {
 
   // The cadence the scan loop actually runs at, after the engine has clamped whatever its config
   // asked for. Reported so a plugin can express a timeout in ticks without hardcoding the engine's
-  // interval — "three ticks" is a property of the parser, "1.5 s" is a guess about the engine.
+  // interval — "three ticks" is a property of the parser, "0.75 s" is a guess about the engine.
   // 0 means an engine older than this field; clients fall back to their own default.
   uint32 scan_interval_ms = 10;
 }

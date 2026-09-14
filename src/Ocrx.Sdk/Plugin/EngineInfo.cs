@@ -23,7 +23,7 @@ namespace Ocrx.Sdk;
 /// <param name="ScanInterval">
 /// How often this engine scans. A plugin that debounces in ticks — "the panel has to stay gone for
 /// three of them" — needs this to state the same rule in seconds, and the number is configurable
-/// engine-side: before it was reported, plugins carried comments asserting 500 ms that no longer
+/// engine-side: before it was reported, plugins carried comments asserting a fixed cadence that no longer
 /// held the moment anyone edited the engine's config. Falls back to
 /// <see cref="EngineDefaults.DefaultScanInterval"/> against an engine too old to report it.
 /// </param>
