@@ -270,9 +270,12 @@ The `overlay` sink is supplied by the separate, opt-in `Ocrx.Sdk.Overlay` packag
 that package and register `new OverlaySinkFactory()` through `PluginHostOptions.OverlayFactory`; an
 unregistered overlay entry is a no-op, preserving portability for plugins that do not reference it.
 Its `overlay` keys include `offsetX`/`offsetY`, `width`/`height`, colours, `template`, and `lingerMs`;
-use numeric `anchor` (`0` for the default top-centre, `1` for custom `x`/`y`) when positioning must
-be explicit. It is a topmost, click-through, no-activate Windows window: it never inspects the game
-process and never requires elevation. A `Cleared` record hides it; `lingerMs: 0` disables auto-hide.
+use numeric `anchor` (`0` for the default top-centre, `1` for custom `x`/`y`, or `2`-`9` for the
+9-cell grid — `2` top-left, `3` top-right, `4` middle-left, `5` centre, `6` middle-right, `7`
+bottom-left, `8` bottom-centre, `9` bottom-right) when positioning must be explicit. The grid anchors
+are resolution-relative to the primary screen, and `offsetX`/`offsetY` still apply on top of them. It
+is a topmost, click-through, no-activate Windows window: it never inspects the game process and never
+requires elevation. A `Cleared` record hides it; `lingerMs: 0` disables auto-hide.
 
 Unlike the file and HTTP sinks, the overlay receives every observation and clear so the on-screen
 state stays current; it is intentionally not change-deduplicated.
