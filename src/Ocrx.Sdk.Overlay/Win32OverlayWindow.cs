@@ -15,6 +15,7 @@ internal sealed class Win32OverlayWindow : IOverlayWindow
 {
     private const int ErrorClassAlreadyExists = 1410;
     private const int SmCxScreen = 0;
+    private const int SmCyScreen = 1;
     private const int SwHide = 0;
     private const int SwShowNoActivate = 4;
     private const uint UlwAlpha = 0x00000002;
@@ -362,11 +363,16 @@ internal sealed class Win32OverlayWindow : IOverlayWindow
 
     private (int X, int Y) Position()
     {
-        var x = _options.Anchor == OverlayAnchor.Custom
-            ? _options.X
-            : (GetSystemMetrics(SmCxScreen) - _options.Width) / 2;
-        var y = _options.Anchor == OverlayAnchor.Custom ? _options.Y : 0;
-        return (x + _options.OffsetX, y + _options.OffsetY);
+        return OverlayPlacement.Resolve(
+            _options.Anchor,
+            GetSystemMetrics(SmCxScreen),
+            GetSystemMetrics(SmCyScreen),
+            _options.Width,
+            _options.Height,
+            _options.OffsetX,
+            _options.OffsetY,
+            _options.X,
+            _options.Y);
     }
 
     private static GraphicsPath RoundedRectangle(int width, int height, int radius)
