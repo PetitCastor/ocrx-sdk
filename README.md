@@ -54,6 +54,7 @@ not reference these projects by path.
 ## Documentation
 
 - [Plugin authoring](docs/PLUGIN-AUTHORING.md)
+- [Plugin settings](docs/PLUGIN-SETTINGS.md)
 - [Protocol and compatibility rules](docs/PROTOCOL.md)
 - [Replay and parity testing](docs/REPLAY.md)
 - [Release compatibility matrix](docs/COMPATIBILITY.md)

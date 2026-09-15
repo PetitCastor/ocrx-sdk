@@ -73,6 +73,20 @@ public interface IOcrxPlugin
         => Task.CompletedTask;
 
     /// <summary>
+    /// Called after the host has opened a Track session and installed it on <paramref name="services"/>.
+    /// A settings-capable plugin publishes its initial <see cref="SettingsSpec"/> here, before the
+    /// host begins consuming ticks, then re-publishes through <see cref="OnApplySettings"/> whenever
+    /// an accepted edit changes its effective value.
+    /// </summary>
+    /// <remarks>
+    /// The default keeps existing plugins source- and binary-compatible. This is deliberately an
+    /// awaited callback rather than work scheduled from <see cref="OnSessionEvent"/>: the latter is
+    /// a synchronous notification with no services argument, while publishing must finish against
+    /// the live session before the plugin can rely on the engine having a current settings spec.
+    /// </remarks>
+    Task OnConnectedAsync(IPluginServices services, CancellationToken ct) => Task.CompletedTask;
+
+    /// <summary>
     /// Connected, reconnecting, ticks dropped, ended. Called synchronously on the host's loop, so it
     /// must not block; anything slow belongs on the next tick.
     /// </summary>

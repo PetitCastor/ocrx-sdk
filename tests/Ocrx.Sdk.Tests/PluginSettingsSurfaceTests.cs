@@ -80,6 +80,30 @@ public class PluginSettingsSurfaceTests
     }
 
     [Fact]
+    public async Task OnConnect_ProvidesLiveServicesForTheInitialSettingsSpec()
+    {
+        var spec = new SettingsSpec(
+            [new SettingsField("theme", "Theme", SettingsFieldType.Select, "light")]);
+        SettingsSpec? published = null;
+        var plugin = new StubPlugin(onConnected: async (services, ct) =>
+            await services.PublishSettingsAsync(spec, ct));
+        var output = new RecordingOutput();
+        var services = new PluginServices([], output, verbose: false, dumpFrame: null)
+        {
+            PublishSettingsHandler = (actual, _) =>
+            {
+                published = actual;
+                return Task.CompletedTask;
+            },
+        };
+        var dispatcher = new TickDispatcher(plugin, services, output);
+
+        await dispatcher.OnConnectedAsync(default);
+
+        Assert.Same(spec, published);
+    }
+
+    [Fact]
     public async Task RebuildOutputs_InvokesTheHostHandlerWithTheConfig()
     {
         var services = new PluginServices([], new RecordingOutput(), verbose: false, dumpFrame: null);
@@ -161,6 +185,202 @@ public class PluginSettingsSurfaceTests
         {
             if (Directory.Exists(dir))
                 Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ApplyPersistRebuildAndPublishAsync_PersistsRebuildsAndPublishes()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"ocrx-settings-{Guid.NewGuid():N}");
+        var path = Path.Combine(dir, "config.json");
+        var output = new RecordingOutput();
+        var services = new PluginServices([], output, verbose: false, dumpFrame: null);
+        PluginConfig? rebuilt = null;
+        SettingsSpec? published = null;
+        services.RebuildOutputsHandler = (cfg, _) => { rebuilt = cfg; return Task.CompletedTask; };
+        services.PublishSettingsHandler = (spec, _) =>
+        {
+            published = spec;
+            return Task.CompletedTask;
+        };
+        var config = new SaveConfig { Theme = "light" };
+
+        try
+        {
+            var updated = await PluginSettings.ApplyPersistRebuildAndPublishAsync(
+                config,
+                path,
+                new ApplySettings([new SettingsValue("theme", "dark")]),
+                services,
+                (cfg, apply, _) =>
+                {
+                    var value = Assert.Single(apply.Values);
+                    Assert.Equal("theme", value.Id);
+                    cfg.Theme = value.Value;
+                    return Task.CompletedTask;
+                },
+                cfg => new SettingsSpec([new SettingsField("theme", "Theme", SettingsFieldType.String, cfg.Theme)]));
+
+            var saved = PluginConfig.Load<SaveConfig>(path);
+            Assert.Equal("dark", saved.Theme);
+            Assert.Equal("light", config.Theme);
+            Assert.Equal("dark", updated.Theme);
+            Assert.Same(updated, rebuilt);
+            Assert.NotNull(published);
+            var publishedField = Assert.Single(published!.Fields);
+            Assert.Equal("theme", publishedField.Id);
+            Assert.Equal("dark", publishedField.Value);
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ApplyPersistRebuildAndPublishAsync_WhenValidationFails_LeavesTheLiveConfigUntouched()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"ocrx-settings-{Guid.NewGuid():N}.json");
+        var services = new PluginServices([], new RecordingOutput(), verbose: false, dumpFrame: null);
+        var config = new SaveConfig { Theme = "light" };
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                PluginSettings.ApplyPersistRebuildAndPublishAsync(
+                    config,
+                    path,
+                    new ApplySettings([new SettingsValue("theme", "dark"), new SettingsValue("other", "x")]),
+                    services,
+                    (_, _, _) => throw new InvalidOperationException("invalid batch"),
+                    cfg => new SettingsSpec([new SettingsField("theme", "Theme", SettingsFieldType.String, cfg.Theme)])));
+
+            Assert.Equal("light", config.Theme);
+            Assert.False(File.Exists(path));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task ApplyPersistRebuildAndPublishAsync_PreservesLoadedRelativeOutputPaths()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"ocrx-settings-{Guid.NewGuid():N}");
+        var path = Path.Combine(dir, "config.json");
+        Directory.CreateDirectory(dir);
+        var initial = new SaveConfig
+        {
+            Theme = "light",
+            Outputs = [new SinkSpec { Type = "json", Path = "records.jsonl" }],
+        };
+        initial.Save(path);
+        var config = PluginConfig.Load<SaveConfig>(path);
+        var services = new PluginServices([], new RecordingOutput(), verbose: false, dumpFrame: null);
+
+        try
+        {
+            _ = await PluginSettings.ApplyPersistRebuildAndPublishAsync(
+                config,
+                path,
+                new ApplySettings([new SettingsValue("theme", "dark")]),
+                services,
+                (cfg, apply, _) =>
+                {
+                    cfg.Theme = Assert.Single(apply.Values).Value;
+                    return Task.CompletedTask;
+                },
+                cfg => new SettingsSpec([new SettingsField("theme", "Theme", SettingsFieldType.String, cfg.Theme)]));
+
+            Assert.Contains("\"path\": \"records.jsonl\"", File.ReadAllText(path));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ApplyPersistRebuildAndPublishAsync_WhenRebuildFails_PersistsNothing()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"ocrx-settings-{Guid.NewGuid():N}");
+        var path = Path.Combine(dir, "config.json");
+        var services = new PluginServices([], new RecordingOutput(), verbose: false, dumpFrame: null);
+        // The rebuild builds real sinks from the edited config and can throw on bad input. When it
+        // does, the file must not have been written — otherwise a restart reloads a config whose
+        // rebuild just failed.
+        services.RebuildOutputsHandler = (_, _) => throw new InvalidOperationException("bad sink");
+        var config = new SaveConfig { Theme = "light" };
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                PluginSettings.ApplyPersistRebuildAndPublishAsync(
+                    config,
+                    path,
+                    new ApplySettings([new SettingsValue("theme", "dark")]),
+                    services,
+                    (cfg, apply, _) =>
+                    {
+                        cfg.Theme = Assert.Single(apply.Values).Value;
+                        return Task.CompletedTask;
+                    },
+                    cfg => new SettingsSpec([new SettingsField("theme", "Theme", SettingsFieldType.String, cfg.Theme)])));
+
+            Assert.False(File.Exists(path));
+            Assert.Equal("light", config.Theme);
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ApplyPersistRebuildAndPublishAsync_WhenApplySetsANewRelativeOutputPath_RebuildsAbsoluteAndPersistsRelative()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"ocrx-settings-{Guid.NewGuid():N}");
+        var path = Path.Combine(dir, "config.json");
+        Directory.CreateDirectory(dir);
+        var initial = new SaveConfig
+        {
+            Outputs = [new SinkSpec { Type = "json", Path = "records.jsonl" }],
+        };
+        initial.Save(path);
+        var config = PluginConfig.Load<SaveConfig>(path);
+        var services = new PluginServices([], new RecordingOutput(), verbose: false, dumpFrame: null);
+        PluginConfig? rebuilt = null;
+        services.RebuildOutputsHandler = (cfg, _) => { rebuilt = cfg; return Task.CompletedTask; };
+
+        try
+        {
+            _ = await PluginSettings.ApplyPersistRebuildAndPublishAsync(
+                config,
+                path,
+                new ApplySettings([new SettingsValue("outputPath", "logs/new.jsonl")]),
+                services,
+                (cfg, apply, _) =>
+                {
+                    cfg.Outputs[0].Path = Assert.Single(apply.Values).Value;
+                    return Task.CompletedTask;
+                },
+                _ => SettingsSpec.Empty);
+
+            // The rebuild must see the edited path resolved against the config directory, not left
+            // relative to be re-rooted against the process CWD.
+            var rebuiltPath = Assert.Single(rebuilt!.Outputs).Path;
+            Assert.True(Path.IsPathRooted(rebuiltPath));
+            Assert.Equal(Path.GetFullPath(Path.Combine(dir, "logs", "new.jsonl")), rebuiltPath);
+
+            // The file keeps the relative spelling the user wrote.
+            Assert.Contains("\"path\": \"logs/new.jsonl\"", File.ReadAllText(path).Replace('\\', '/'));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
         }
     }
 

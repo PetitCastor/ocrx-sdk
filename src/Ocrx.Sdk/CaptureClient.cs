@@ -313,7 +313,7 @@ public sealed class TrackSession : IAsyncDisposable
             if (response.MsgCase == TrackResponse.MsgOneofCase.ApplySettings)
             {
                 if (ApplySettingsHandler is { } handler)
-                    await handler(ApplySettings.FromProto(response.ApplySettings), ct);
+                    await handler(response.ApplySettings.ToApplySettings(), ct);
 
                 continue;
             }
@@ -333,9 +333,17 @@ public sealed class TrackSession : IAsyncDisposable
     /// loop while a tracker thread may be updating ROIs.
     /// </summary>
     public Task PublishSettingsAsync(SettingsSpec spec)
+        => PublishSettingsAsync(spec, CancellationToken.None);
+
+    /// <summary>
+    /// Sends the plugin's current settings spec while observing <paramref name="ct"/> before it
+    /// acquires the request-stream writer. The existing tokenless overload remains for binary
+    /// compatibility with plugins compiled against the first settings surface.
+    /// </summary>
+    public Task PublishSettingsAsync(SettingsSpec spec, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(spec);
-        return SendAsync(new TrackRequest { Settings = spec.ToProto() });
+        return SendAsync(new TrackRequest { Settings = spec.ToProto() }, ct);
     }
 
     /// <summary>Full-replacement update of the subscribed set.</summary>
@@ -486,9 +494,9 @@ public sealed class TrackSession : IAsyncDisposable
         _call.Dispose();
     }
 
-    private async Task SendAsync(TrackRequest request)
+    private async Task SendAsync(TrackRequest request, CancellationToken ct = default)
     {
-        await _writeGate.WaitAsync();
+        await _writeGate.WaitAsync(ct);
         try
         {
             ObjectDisposedException.ThrowIf(_requestStreamClosed, this);
