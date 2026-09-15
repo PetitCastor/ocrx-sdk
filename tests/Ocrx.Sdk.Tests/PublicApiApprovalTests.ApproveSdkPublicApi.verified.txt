@@ -182,7 +182,7 @@ namespace Ocrx.Sdk
         public string PipeName { get; set; }
         public bool SaveDebugFrames { get; set; }
         protected virtual void AfterLoad(string configPath) { }
-        public TConfig CloneForSettings<TConfig>()
+        public TConfig CloneForSettings<TConfig>(string configPath)
             where TConfig : Ocrx.Sdk.PluginConfig { }
         public void Save(string path) { }
         public static T Load<T>(string path)

@@ -36,7 +36,7 @@ public static class PluginSettings
         ArgumentNullException.ThrowIfNull(validateAndApply);
         ArgumentNullException.ThrowIfNull(buildSpec);
 
-        var candidate = config.CloneForSettings<TConfig>();
+        var candidate = config.CloneForSettings<TConfig>(configPath);
         await validateAndApply(candidate, apply, ct);
         candidate.Save(configPath);
         await services.RebuildOutputsAsync(candidate, ct);

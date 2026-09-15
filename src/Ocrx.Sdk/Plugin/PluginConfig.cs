@@ -86,13 +86,18 @@ public abstract class PluginConfig
     /// config's relative output-path forms so a successful unrelated edit does not make those paths
     /// absolute when persisted.
     /// </summary>
-    public TConfig CloneForSettings<TConfig>() where TConfig : PluginConfig
+    public TConfig CloneForSettings<TConfig>(string configPath) where TConfig : PluginConfig
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(configPath);
+
         var json = JsonSerializer.Serialize(this, GetType(), JsonOptions);
         var clone = JsonSerializer.Deserialize(json, GetType(), JsonOptions) as TConfig
             ?? throw new InvalidOperationException($"Could not clone {GetType().FullName}.");
 
+        NormalizeOutputs(clone);
         clone._persistedOutputPaths = [.. _persistedOutputPaths];
+        clone.AfterLoad(configPath);
+        ResolveOutputPaths(clone, configPath);
         return clone;
     }
 

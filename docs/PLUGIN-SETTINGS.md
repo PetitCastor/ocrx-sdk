@@ -89,10 +89,9 @@ the batch. For each value, the plugin should:
 
 1. Validate that the field id is known.
 2. Parse and validate the string value for that field.
-3. Update the plugin's own config model.
-4. Persist that config in the plugin's local config file.
-5. Rebuild affected local sinks with `IPluginServices.RebuildOutputsAsync`.
-6. Publish a fresh `SettingsSpec` with the effective current values.
+3. Apply every value to a candidate config, never the live config.
+4. Persist the candidate, rebuild its local sinks, and publish its fresh spec.
+5. Replace the live config only after that complete operation succeeds.
 
 ```csharp
 public async Task OnApplySettings(
@@ -100,24 +99,32 @@ public async Task OnApplySettings(
     IPluginServices services,
     CancellationToken ct)
 {
-    foreach (var value in apply.Values)
-    {
-        switch (value.Id)
+    config = await PluginSettings.ApplyPersistRebuildAndPublishAsync(
+        config,
+        configPath,
+        apply,
+        services,
+        (candidate, values, _) =>
         {
-            case "captureLimit":
-                config.CaptureLimit = ParseLimit(value.Value);
-                break;
-            case "displayDensity":
-                config.DisplayDensity = ParseDensity(value.Value);
-                break;
-            default:
-                throw new InvalidOperationException($"Unknown setting '{value.Id}'.");
-        }
-    }
+            foreach (var value in values.Values)
+            {
+                switch (value.Id)
+                {
+                    case "captureLimit":
+                        candidate.CaptureLimit = ParseLimit(value.Value);
+                        break;
+                    case "displayDensity":
+                        candidate.DisplayDensity = ParseDensity(value.Value);
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Unknown setting '{value.Id}'.");
+                }
+            }
 
-    config.Save(configPath);
-    await services.RebuildOutputsAsync(config, ct);
-    await services.PublishSettingsAsync(BuildSettingsSpec(config), ct);
+            return Task.CompletedTask;
+        },
+        BuildSettingsSpec,
+        ct);
 }
 ```
 

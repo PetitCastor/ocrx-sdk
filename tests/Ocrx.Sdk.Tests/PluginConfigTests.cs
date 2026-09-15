@@ -143,6 +143,17 @@ public class PluginConfigTests : IDisposable
         Assert.Equal(path, config.ResolvedAgainst);
     }
 
+    [Fact]
+    public void CloneForSettings_RunsAfterLoadForTheCandidate()
+    {
+        var path = Path_("config.json");
+        var config = PluginConfig.Load<TestConfig>(path);
+
+        var candidate = config.CloneForSettings<TestConfig>(path);
+
+        Assert.Equal(path, candidate.ResolvedAgainst);
+    }
+
     /// <summary>
     /// The first-run file is written BEFORE <c>AfterLoad</c> resolves anything, so a path the hook
     /// expands to an absolute location is not what lands on disk. That ordering is deliberate — it is
