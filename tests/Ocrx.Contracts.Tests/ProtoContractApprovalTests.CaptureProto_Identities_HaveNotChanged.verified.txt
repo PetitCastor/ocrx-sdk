@@ -234,6 +234,16 @@
           "EnumType": null,
           "Label": "Singular",
           "Oneof": "msg"
+        },
+        {
+          "FieldNumber": 3,
+          "Name": "settings",
+          "JsonName": "settings",
+          "Type": "Message",
+          "MessageType": "capture.SettingsSpec",
+          "EnumType": null,
+          "Label": "Singular",
+          "Oneof": "msg"
         }
       ]
     },
@@ -499,6 +509,16 @@
           "EnumType": null,
           "Label": "Singular",
           "Oneof": "msg"
+        },
+        {
+          "FieldNumber": 3,
+          "Name": "apply_settings",
+          "JsonName": "applySettings",
+          "Type": "Message",
+          "MessageType": "capture.ApplySettings",
+          "EnumType": null,
+          "Label": "Singular",
+          "Oneof": "msg"
         }
       ]
     },
@@ -550,6 +570,181 @@
           "Name": "replay_mode",
           "JsonName": "replayMode",
           "Type": "Bool",
+          "MessageType": null,
+          "EnumType": null,
+          "Label": "Singular",
+          "Oneof": null
+        }
+      ]
+    },
+    {
+      "FullName": "capture.SettingsOption",
+      "Fields": [
+        {
+          "FieldNumber": 1,
+          "Name": "value",
+          "JsonName": "value",
+          "Type": "String",
+          "MessageType": null,
+          "EnumType": null,
+          "Label": "Singular",
+          "Oneof": null
+        },
+        {
+          "FieldNumber": 2,
+          "Name": "label",
+          "JsonName": "label",
+          "Type": "String",
+          "MessageType": null,
+          "EnumType": null,
+          "Label": "Singular",
+          "Oneof": null
+        }
+      ]
+    },
+    {
+      "FullName": "capture.SettingsField",
+      "Fields": [
+        {
+          "FieldNumber": 1,
+          "Name": "id",
+          "JsonName": "id",
+          "Type": "String",
+          "MessageType": null,
+          "EnumType": null,
+          "Label": "Singular",
+          "Oneof": null
+        },
+        {
+          "FieldNumber": 2,
+          "Name": "label",
+          "JsonName": "label",
+          "Type": "String",
+          "MessageType": null,
+          "EnumType": null,
+          "Label": "Singular",
+          "Oneof": null
+        },
+        {
+          "FieldNumber": 3,
+          "Name": "help",
+          "JsonName": "help",
+          "Type": "String",
+          "MessageType": null,
+          "EnumType": null,
+          "Label": "Singular",
+          "Oneof": null
+        },
+        {
+          "FieldNumber": 4,
+          "Name": "type",
+          "JsonName": "type",
+          "Type": "Enum",
+          "MessageType": null,
+          "EnumType": "capture.SettingsFieldType",
+          "Label": "Singular",
+          "Oneof": null
+        },
+        {
+          "FieldNumber": 5,
+          "Name": "value",
+          "JsonName": "value",
+          "Type": "String",
+          "MessageType": null,
+          "EnumType": null,
+          "Label": "Singular",
+          "Oneof": null
+        },
+        {
+          "FieldNumber": 6,
+          "Name": "options",
+          "JsonName": "options",
+          "Type": "Message",
+          "MessageType": "capture.SettingsOption",
+          "EnumType": null,
+          "Label": "Repeated",
+          "Oneof": null
+        },
+        {
+          "FieldNumber": 7,
+          "Name": "min",
+          "JsonName": "min",
+          "Type": "Double",
+          "MessageType": null,
+          "EnumType": null,
+          "Label": "Singular",
+          "Oneof": "_min"
+        },
+        {
+          "FieldNumber": 8,
+          "Name": "max",
+          "JsonName": "max",
+          "Type": "Double",
+          "MessageType": null,
+          "EnumType": null,
+          "Label": "Singular",
+          "Oneof": "_max"
+        },
+        {
+          "FieldNumber": 9,
+          "Name": "group",
+          "JsonName": "group",
+          "Type": "String",
+          "MessageType": null,
+          "EnumType": null,
+          "Label": "Singular",
+          "Oneof": null
+        }
+      ]
+    },
+    {
+      "FullName": "capture.SettingsSpec",
+      "Fields": [
+        {
+          "FieldNumber": 1,
+          "Name": "fields",
+          "JsonName": "fields",
+          "Type": "Message",
+          "MessageType": "capture.SettingsField",
+          "EnumType": null,
+          "Label": "Repeated",
+          "Oneof": null
+        }
+      ]
+    },
+    {
+      "FullName": "capture.ApplySettings",
+      "Fields": [
+        {
+          "FieldNumber": 1,
+          "Name": "values",
+          "JsonName": "values",
+          "Type": "Message",
+          "MessageType": "capture.SettingsValue",
+          "EnumType": null,
+          "Label": "Repeated",
+          "Oneof": null
+        }
+      ]
+    },
+    {
+      "FullName": "capture.SettingsValue",
+      "Fields": [
+        {
+          "FieldNumber": 1,
+          "Name": "id",
+          "JsonName": "id",
+          "Type": "String",
+          "MessageType": null,
+          "EnumType": null,
+          "Label": "Singular",
+          "Oneof": null
+        },
+        {
+          "FieldNumber": 2,
+          "Name": "value",
+          "JsonName": "value",
+          "Type": "String",
           "MessageType": null,
           "EnumType": null,
           "Label": "Singular",
@@ -823,6 +1018,35 @@
         {
           "Number": 3,
           "Name": "ROI_RESULT_KIND_PIXELS"
+        }
+      ]
+    },
+    {
+      "FullName": "capture.SettingsFieldType",
+      "Values": [
+        {
+          "Number": 0,
+          "Name": "SETTINGS_FIELD_TYPE_UNSPECIFIED"
+        },
+        {
+          "Number": 1,
+          "Name": "SETTINGS_FIELD_TYPE_SELECT"
+        },
+        {
+          "Number": 2,
+          "Name": "SETTINGS_FIELD_TYPE_TOGGLE"
+        },
+        {
+          "Number": 3,
+          "Name": "SETTINGS_FIELD_TYPE_INT"
+        },
+        {
+          "Number": 4,
+          "Name": "SETTINGS_FIELD_TYPE_FLOAT"
+        },
+        {
+          "Number": 5,
+          "Name": "SETTINGS_FIELD_TYPE_STRING"
         }
       ]
     }

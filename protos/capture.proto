@@ -83,6 +83,7 @@ message TrackRequest {
   oneof msg {
     Hello hello = 1;
     RoiSetUpdate rois = 2;
+    SettingsSpec settings = 3;  // plugin projects its editable settings; see settings section
   }
 }
 
@@ -157,6 +158,7 @@ message TrackResponse {
   oneof msg {
     TickResult tick = 1;
     HelloAck hello_ack = 2;  // sent exactly once, before first tick, in response to Hello
+    ApplySettings apply_settings = 3;  // engine forwards user edits down; see settings section
   }
 }
 
@@ -173,6 +175,66 @@ message HelloAck {
   uint32 frame_height = 4;
 
   bool replay_mode = 5;
+}
+
+// ---------- plugin settings projection ----------
+//
+// A plugin projects its own editable settings into the engine's Settings panel. The engine is
+// schema-blind: it renders one generic widget per declared field and NEVER learns a field's
+// meaning — exactly as RoiOverlayController treats plugin ROIs as opaque rectangles. Values
+// travel as strings in both directions; the PLUGIN owns all parsing and validation.
+//
+// Direction is forced by the RPC shape: the plugin is the gRPC client, the engine the server, so
+// the spec rides TrackRequest (plugin -> engine) and the apply rides TrackResponse
+// (engine -> plugin). The engine cannot dial the plugin. All of this is additive: an old peer on
+// either side skips the unknown oneof arm (proto3), so no ProtocolVersion bump.
+
+// Buf STANDARD lint requires ENUM_VALUE_PREFIX, so the wire names carry the enum-name prefix. The
+// C# generator strips it, so the generated surface is Select / Toggle / Int / Float / String.
+enum SettingsFieldType {
+  SETTINGS_FIELD_TYPE_UNSPECIFIED = 0;  // engine renders nothing for an unknown/unset type
+  SETTINGS_FIELD_TYPE_SELECT = 1;   // options is the closed value set
+  SETTINGS_FIELD_TYPE_TOGGLE = 2;   // value is "true"/"false"
+  SETTINGS_FIELD_TYPE_INT = 3;      // value parses as an integer; min/max bound it
+  SETTINGS_FIELD_TYPE_FLOAT = 4;    // value parses as a double; min/max bound it
+  SETTINGS_FIELD_TYPE_STRING = 5;   // free text
+}
+
+message SettingsOption {
+  string value = 1;  // the string that goes on the wire when chosen
+  string label = 2;  // human-facing text for the widget
+}
+
+message SettingsField {
+  // Opaque to the engine; non-empty and unique within a SettingsSpec, so an ApplySettings value
+  // identifies exactly one field.
+  string id = 1;
+  string label = 2;
+  string help = 3;
+  SettingsFieldType type = 4;
+  string value = 5;   // current value, as a string
+  repeated SettingsOption options = 6;  // SELECT only; the closed set of choices
+  // INT/FLOAT only. Presence distinguishes an unbounded side from a valid zero bound.
+  optional double min = 7;
+  optional double max = 8;
+  string group = 9;   // optional section header the engine may group by
+}
+
+// plugin -> engine. Sent on connect and whenever the plugin's settings change, always carrying
+// current values. An empty fields list means the plugin has no editable settings (empty panel).
+message SettingsSpec {
+  repeated SettingsField fields = 1;
+}
+
+// engine -> plugin. The user-edited values the plugin must validate, apply, persist to its own
+// config, and reflect back in a fresh SettingsSpec. Only changed fields need appear.
+message ApplySettings {
+  repeated SettingsValue values = 1;
+}
+
+message SettingsValue {
+  string id = 1;     // matches a SettingsField.id the plugin declared
+  string value = 2;  // the new value, as a string
 }
 
 // ---------- unary ----------
