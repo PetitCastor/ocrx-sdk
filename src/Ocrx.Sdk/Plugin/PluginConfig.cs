@@ -76,6 +76,49 @@ public abstract class PluginConfig
     }
 
     /// <summary>
+    /// Writes the config back to <paramref name="path"/> as the same camel-cased, indented JSON
+    /// <see cref="Load{T}"/> reads, for a plugin persisting a settings change from
+    /// <see cref="IOcrxPlugin.OnApplySettings"/>. Serialised through the runtime type, so a derived
+    /// config's own fields are written too.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Writes through a temporary file in the same directory and replaces, so a crash or a full disk
+    /// mid-write leaves the previous config intact rather than a truncated one — the same guarantee
+    /// <see cref="ConfigSeed"/> makes for the file it seeds.
+    /// </para>
+    /// <para>
+    /// This is a full rewrite of the modelled settings, not a merge: a key the config type does not
+    /// bind is not preserved, exactly as <see cref="Load{T}"/> already ignores it. Any
+    /// <see cref="SinkSpec.Path"/> under <see cref="Outputs"/> was resolved to an absolute path on
+    /// load, so it is persisted absolute — expected, since the overlay outputs a settings apply
+    /// rebuilds carry no path at all.
+    /// </para>
+    /// </remarks>
+    public void Save(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        var full = Path.GetFullPath(path);
+        Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+
+        var json = JsonSerializer.Serialize(this, GetType(), JsonOptions);
+        var temp = full + ".tmp";
+        try
+        {
+            File.WriteAllText(temp, json);
+            File.Move(temp, full, overwrite: true);
+        }
+        catch
+        {
+            try { File.Delete(temp); }
+            catch (IOException) { /* the write's own exception matters more than the temp file. */ }
+
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Runs after the values are in place, on both the first-run and the read-back path. Override to
     /// resolve anything that depends on where the config file itself lives — a relative ledger path
     /// against the config's directory, for one. <paramref name="configPath"/> is the file that was

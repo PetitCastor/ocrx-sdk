@@ -117,6 +117,18 @@ public static class OcrxPluginHost
             services = new PluginServices(records, output, parsed.Verbose,
                 config.SaveDebugFrames ? client.DumpFrameAsync : null,
                 client.ReadRoiAsync, recordSink: null, outputPipeline: outputPipeline);
+
+            // A settings apply that changes an output (an overlay theme, typically) recomposes the
+            // sinks from the mutated config and swaps them live. The host owns the pipeline and the
+            // options a rebuild must honour, so the seam is a delegate it closes over rather than
+            // state the services would otherwise have to carry.
+            services.RebuildOutputsHandler = async (mutatedConfig, _) =>
+            {
+                var recomposed = await PluginOutputPipeline.ComposeAsync(
+                    options, mutatedConfig, IsReplay, output);
+                await outputPipeline.ReplaceSinkAsync(recomposed);
+            };
+
             services.StartDraining(ct);
 
             output.WriteLine($"Pipe:      {parsed.PipeName}");

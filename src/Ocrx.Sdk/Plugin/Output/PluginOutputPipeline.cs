@@ -9,7 +9,13 @@ namespace Ocrx.Sdk;
 internal sealed class PluginOutputPipeline
 {
     private readonly IPluginOutput _output;
-    private readonly IRecordSink _sink;
+
+    // Guards the composed sink: the drain reads it around each emit, and a live rebuild
+    // (RebuildOutputsAsync, when a settings edit changes an overlay) swaps it. Async work runs
+    // under it, so a SemaphoreSlim rather than a lock.
+    private readonly SemaphoreSlim _sinkGate = new(1, 1);
+    private IRecordSink _sink;
+
     private readonly Channel<CaptureRecord> _outbox =
         Channel.CreateUnbounded<CaptureRecord>(new UnboundedChannelOptions { SingleReader = true });
 
@@ -26,6 +32,17 @@ internal sealed class PluginOutputPipeline
     /// built before it is disposed before the configuration error is returned to the host.
     /// </summary>
     public static async Task<PluginOutputPipeline> CreateAsync(PluginHostOptions options,
+        PluginConfig config, Func<bool> isReplay, IPluginOutput output)
+        => new(await ComposeAsync(options, config, isReplay, output), output);
+
+    /// <summary>
+    /// Composes the sinks for a config into one ordered <see cref="CompositeRecordSink"/> — the
+    /// same wiring the run starts with and a live rebuild reproduces. Explicit
+    /// <see cref="PluginHostOptions.Sinks"/> win over config; the legacy
+    /// <see cref="PluginHostOptions.RecordSink"/> is appended as one more ordered sink. On a bad
+    /// spec, everything built before it is disposed before the error propagates.
+    /// </summary>
+    public static async Task<IRecordSink> ComposeAsync(PluginHostOptions options,
         PluginConfig config, Func<bool> isReplay, IPluginOutput output)
     {
         List<IRecordSink> sinks = [];
@@ -51,7 +68,7 @@ internal sealed class PluginOutputPipeline
         if (options.RecordSink is { } legacy)
             sinks.Add(new DelegateRecordSink(legacy));
 
-        return new PluginOutputPipeline(new CompositeRecordSink(sinks), output);
+        return new CompositeRecordSink(sinks);
     }
 
     public void Enqueue(CaptureRecord record) => _outbox.Writer.TryWrite(record);
@@ -59,12 +76,40 @@ internal sealed class PluginOutputPipeline
     /// <summary>Starts the run's single background sink-drain task.</summary>
     public void Start(CancellationToken ct) => _drain = Task.Run(() => DrainAsync(ct));
 
+    /// <summary>
+    /// Swaps in a freshly composed sink and disposes the one it replaces. The new sink is live
+    /// before the old is torn down, so a record enqueued during the swap is never dropped — at
+    /// worst it waits behind the swap on the same gate the drain uses.
+    /// </summary>
+    public async Task ReplaceSinkAsync(IRecordSink newSink)
+    {
+        ArgumentNullException.ThrowIfNull(newSink);
+
+        IRecordSink old;
+        await _sinkGate.WaitAsync();
+        try
+        {
+            old = _sink;
+            _sink = newSink;
+        }
+        finally
+        {
+            _sinkGate.Release();
+        }
+
+        // Dispose outside the gate: tearing an overlay window down must not block emits to the sink
+        // that has already taken its place.
+        await old.DisposeAsync();
+    }
+
     /// <summary>Flushes every queued record before disposing the composed sink.</summary>
     public async Task CompleteAndDrainAsync()
     {
         _outbox.Writer.TryComplete();
         if (_drain is not null)
             await _drain;
+
+        // The drain has stopped, so nothing else touches _sink; no gate needed here.
         await _sink.DisposeAsync();
     }
 
@@ -74,8 +119,12 @@ internal sealed class PluginOutputPipeline
         // queued. The ct passed to EmitAsync is what lets a sink abort a slow write.
         await foreach (var record in _outbox.Reader.ReadAllAsync(CancellationToken.None))
         {
+            // Held across the emit so a rebuild cannot dispose the sink mid-write; the swap simply
+            // waits for the in-flight emit to finish.
+            await _sinkGate.WaitAsync(CancellationToken.None);
             try { await _sink.EmitAsync(record, ct); }
             catch (Exception ex) { _output.WriteLine($"sink error: {ex.Message}"); }
+            finally { _sinkGate.Release(); }
         }
     }
 }

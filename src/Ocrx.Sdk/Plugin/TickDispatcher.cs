@@ -90,6 +90,27 @@ internal sealed class TickDispatcher
     }
 
     /// <summary>
+    /// Hands a forwarded settings edit to the plugin, under the same rule a tick gets: one failed
+    /// apply is logged and the run continues. A cancellation propagates so the host's loop can end.
+    /// </summary>
+    public async Task ApplySettingsAsync(ApplySettings apply, CancellationToken ct)
+    {
+        try
+        {
+            await _plugin.OnApplySettings(apply, _services, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _output.WriteLine(
+                $"[{DateTime.Now:HH:mm:ss.fff}] {_plugin.Name}: settings apply failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Which of the subscribed regions the engine flagged as failed on this tick.
     /// </summary>
     /// <remarks>

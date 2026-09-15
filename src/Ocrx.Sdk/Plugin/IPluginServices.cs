@@ -57,6 +57,34 @@ public interface IPluginServices
     /// </exception>
     Task<OcrRegionResult?> ReadRoiAsync(RoiSubscription roi, CancellationToken ct);
 
+    /// <summary>
+    /// Projects the plugin's editable settings into the engine's Settings panel, carrying the
+    /// current values. Send one on connect and again whenever a value changes — the spec is a full
+    /// idempotent replacement, so re-sending it is always safe. The engine renders one generic
+    /// widget per <see cref="SettingsField"/> and never learns what a field means.
+    /// </summary>
+    /// <remarks>
+    /// Best-effort by design: with no live session (the plugin is between connects) the call is a
+    /// no-op, because the plugin re-publishes on the next <see cref="SessionEvent.Connected"/>. A
+    /// default no-op implementation keeps older plugin test doubles — which know nothing about
+    /// settings — compiling against this surface.
+    /// </remarks>
+    Task PublishSettingsAsync(SettingsSpec spec, CancellationToken ct = default) => Task.CompletedTask;
+
+    /// <summary>
+    /// Rebuilds the run's output sinks from <paramref name="config"/> and swaps them in live, so a
+    /// settings change that alters an <c>"overlay"</c> (or any other) output takes effect with no
+    /// process restart. Call it after mutating the plugin's <see cref="PluginConfig.Outputs"/> and
+    /// persisting the file, from inside <see cref="IOcrxPlugin.OnApplySettings"/>.
+    /// </summary>
+    /// <remarks>
+    /// The old sinks are disposed after the new ones are in place — the overlay window is torn down
+    /// and a fresh one built to the new spec. Explicit sinks supplied through
+    /// <see cref="PluginHostOptions.Sinks"/> still win over config, exactly as they do at startup.
+    /// A default no-op keeps older test doubles compiling.
+    /// </remarks>
+    Task RebuildOutputsAsync(PluginConfig config, CancellationToken ct = default) => Task.CompletedTask;
+
     /// <summary>What is on the other end, as of the current connect.</summary>
     EngineInfo Engine { get; }
 

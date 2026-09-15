@@ -60,6 +60,10 @@ internal sealed class PluginSessionRunner
 
                     await using var session = await _client.TrackAsync(_plugin.Name, _rois, ct);
 
+                    // Route the engine's settings edits to the plugin before consuming ticks, and
+                    // give the services the live session so a plugin can publish its spec.
+                    session.ApplySettingsHandler = _dispatcher.ApplySettingsAsync;
+                    _services.Session = session;
                     _services.Engine = engine.WithSession(session);
                     _dispatcher.OnConnected();
                     reconnectAttempt = 0;

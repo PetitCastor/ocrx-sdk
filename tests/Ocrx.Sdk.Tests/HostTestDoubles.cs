@@ -39,12 +39,15 @@ internal sealed class RecordingOutput : IPluginOutput
 internal sealed class StubPlugin : IOcrxPlugin
 {
     private readonly Func<TickContext, CancellationToken, Task>? _onTick;
+    private readonly Func<ApplySettings, IPluginServices, CancellationToken, Task>? _onApply;
 
     public StubPlugin(Func<TickContext, CancellationToken, Task>? onTick = null,
-        RoiErrorPolicy errorPolicy = RoiErrorPolicy.PassThrough)
+        RoiErrorPolicy errorPolicy = RoiErrorPolicy.PassThrough,
+        Func<ApplySettings, IPluginServices, CancellationToken, Task>? onApply = null)
     {
         _onTick = onTick;
         ErrorPolicy = errorPolicy;
+        _onApply = onApply;
     }
 
     public string Name { get; init; } = "stub";
@@ -57,6 +60,7 @@ internal sealed class StubPlugin : IOcrxPlugin
     public List<SessionEvent> Events { get; } = [];
     public List<TickData> Ticks { get; } = [];
     public List<TickData> ManualTicks { get; } = [];
+    public List<ApplySettings> Applied { get; } = [];
 
     /// <summary>Extra lines the host must print under its own summary.</summary>
     public List<string> Summary { get; } = [];
@@ -72,6 +76,14 @@ internal sealed class StubPlugin : IOcrxPlugin
     {
         ManualTicks.Add(ctx.Tick);
         return OnTickAsync(ctx, ct);
+    }
+
+    public async Task OnApplySettings(ApplySettings apply, IPluginServices services,
+        CancellationToken ct)
+    {
+        Applied.Add(apply);
+        if (_onApply is not null)
+            await _onApply(apply, services, ct);
     }
 
     public void OnSessionEvent(SessionEvent evt) => Events.Add(evt);

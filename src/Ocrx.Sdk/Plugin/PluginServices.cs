@@ -1,3 +1,4 @@
+using Grpc.Core;
 using Ocrx.Contracts;
 
 namespace Ocrx.Sdk;
@@ -64,6 +65,46 @@ internal sealed class PluginServices : IPluginServices
     /// </summary>
     public EngineInfo Engine { get; internal set; } = new("", 0, 0, 0, ReplayMode: false,
         OcrLanguage: "", ConnectedClients: [], ScanInterval: EngineDefaults.DefaultScanInterval);
+
+    /// <summary>
+    /// The live Track session, set by the host on every connect and left pointing at the last one
+    /// after a disconnect. <see cref="PublishSettingsAsync"/> writes through it; a disposed one is
+    /// treated as "no session", since the plugin re-publishes on the next connect.
+    /// </summary>
+    internal TrackSession? Session { get; set; }
+
+    /// <summary>
+    /// Recomposes and swaps the run's output sinks from a config. Supplied by the host, which owns
+    /// the pipeline and the options a rebuild must honour; null in a test double that never
+    /// exercises a live rebuild.
+    /// </summary>
+    internal Func<PluginConfig, CancellationToken, Task>? RebuildOutputsHandler { get; set; }
+
+    public async Task PublishSettingsAsync(SettingsSpec spec, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(spec);
+
+        if (Session is not { } session)
+            return;
+
+        try
+        {
+            await session.PublishSettingsAsync(spec);
+        }
+        catch (Exception ex) when (ex is ObjectDisposedException or RpcException
+            or OperationCanceledException && !ct.IsCancellationRequested)
+        {
+            // The session ended between the check and the write. Not a failure the plugin can act
+            // on: the engine gets a fresh spec when the plugin re-publishes on the next connect.
+            LogVerbose($"settings publish skipped — no live session: {ex.Message}");
+        }
+    }
+
+    public Task RebuildOutputsAsync(PluginConfig config, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(config);
+        return RebuildOutputsHandler?.Invoke(config, ct) ?? Task.CompletedTask;
+    }
 
     public void Emit(CaptureRecord record)
     {

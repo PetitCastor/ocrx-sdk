@@ -20,6 +20,14 @@ public sealed class FakePluginServices : IPluginServices
     /// <summary>Every clear a plugin under test handed to <see cref="EmitCleared"/>, in order.</summary>
     public List<CaptureRecord> Cleared { get; } = [];
 
+    /// <summary>Every spec a plugin under test projected through <see cref="PublishSettingsAsync"/>,
+    /// in order — for asserting it re-publishes after applying an edit.</summary>
+    public List<SettingsSpec> Published { get; } = [];
+
+    /// <summary>Every config a plugin under test asked to rebuild sinks from through
+    /// <see cref="RebuildOutputsAsync"/>, in order.</summary>
+    public List<PluginConfig> Rebuilt { get; } = [];
+
     /// <summary>Every line written through <see cref="Log"/>.</summary>
     public IReadOnlyList<string> Logs => _logs;
 
@@ -64,6 +72,18 @@ public sealed class FakePluginServices : IPluginServices
 
     public Task<OcrRegionResult?> ReadRoiAsync(RoiSubscription roi, CancellationToken ct)
         => ReadRoiHandler?.Invoke(roi, ct) ?? Task.FromResult<OcrRegionResult?>(null);
+
+    public Task PublishSettingsAsync(SettingsSpec spec, CancellationToken ct = default)
+    {
+        Published.Add(spec);
+        return Task.CompletedTask;
+    }
+
+    public Task RebuildOutputsAsync(PluginConfig config, CancellationToken ct = default)
+    {
+        Rebuilt.Add(config);
+        return Task.CompletedTask;
+    }
 
     public void Log(string message) => _logs.Add(message);
 
