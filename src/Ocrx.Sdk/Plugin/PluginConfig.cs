@@ -76,6 +76,43 @@ public abstract class PluginConfig
     }
 
     /// <summary>
+    /// Writes the config back to <paramref name="path"/> as the same camel-cased, indented JSON
+    /// <see cref="Load{T}"/> reads, for a plugin persisting a settings change from
+    /// <see cref="IOcrxPlugin.OnApplySettings"/>. Serialised through the runtime type, so a derived
+    /// config's own fields are written too.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Writes through a temporary file in the same directory and replaces, so a crash or a full disk
+    /// mid-write leaves the previous config intact rather than a truncated one — the same guarantee
+    /// <see cref="ConfigSeed"/> makes for the file it seeds.
+    /// </para>
+    /// <para>
+    /// This is a full rewrite of the modelled settings, not a merge: a key the config type does not
+    /// bind is not preserved, exactly as <see cref="Load{T}"/> already ignores it.
+    /// </para>
+    /// <para>
+    /// Known limitation: <see cref="Load{T}"/> resolves every relative <see cref="SinkSpec.Path"/>
+    /// under <see cref="Outputs"/> to an absolute path in memory, and this writes the object as it
+    /// stands — so saving a config that carries a <c>"json"</c>/<c>"csv"</c> output with a relative
+    /// path persists that path absolute, losing its portability. It is safe for the case this method
+    /// exists to serve, a settings apply over an <c>"overlay"</c> output, which carries no path at
+    /// all. A plugin that persists file-sink paths through settings wants relative paths preserved,
+    /// which is a change to the shared load-time resolution and is deliberately out of scope here.
+    /// </para>
+    /// </remarks>
+    public void Save(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        var full = Path.GetFullPath(path);
+        Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+
+        // The same crash-safe temp-then-replace ConfigSeed uses to protect a file the user edits.
+        ConfigSeed.Write(full, JsonSerializer.Serialize(this, GetType(), JsonOptions));
+    }
+
+    /// <summary>
     /// Runs after the values are in place, on both the first-run and the read-back path. Override to
     /// resolve anything that depends on where the config file itself lives — a relative ledger path
     /// against the config's directory, for one. <paramref name="configPath"/> is the file that was

@@ -91,6 +91,28 @@ public class FakePluginServicesTests
     }
 
     [Fact]
+    public async Task PublishSettingsAsync_RecordsTheSpec()
+    {
+        var services = new FakePluginServices();
+        var spec = new SettingsSpec([new SettingsField("theme", "Theme", SettingsFieldType.Select, "dark")]);
+
+        await services.PublishSettingsAsync(spec);
+
+        Assert.Same(spec, Assert.Single(services.Published));
+    }
+
+    [Fact]
+    public async Task RebuildOutputsAsync_RecordsTheConfig()
+    {
+        var services = new FakePluginServices();
+        var config = new StubConfig();
+
+        await services.RebuildOutputsAsync(config);
+
+        Assert.Same(config, Assert.Single(services.Rebuilt));
+    }
+
+    [Fact]
     public void Engine_IsSettable()
     {
         var services = new FakePluginServices();
@@ -101,4 +123,6 @@ public class FakePluginServicesTests
 
         Assert.Same(engine, services.Engine);
     }
+
+    private sealed class StubConfig : PluginConfig;
 }

@@ -55,6 +55,24 @@ public interface IOcrxPlugin
     Task OnManualTickAsync(TickContext ctx, CancellationToken ct) => OnTickAsync(ctx, ct);
 
     /// <summary>
+    /// The engine forwarded a user's settings edit down the Track stream. Validate each
+    /// <see cref="SettingsValue"/>, apply it to the plugin's own config, persist that config, rebuild
+    /// affected sinks through <see cref="IPluginServices.RebuildOutputsAsync"/>, and re-publish a
+    /// fresh <see cref="SettingsSpec"/> with <see cref="IPluginServices.PublishSettingsAsync"/> so the
+    /// panel reflects the new current values.
+    /// </summary>
+    /// <remarks>
+    /// Called on the host's tick loop, sequentially with <see cref="OnTickAsync"/> — never overlapping
+    /// one — so the plugin's state needs no locking. Throwing does not end the run: the host logs it
+    /// and carries on, exactly as it does for a throwing tick. Defaults to a no-op, so a plugin with
+    /// no editable settings is unaffected and never has to mention this method. The engine only ever
+    /// sends ids the plugin itself declared in a prior spec, but a value's contents are the user's, so
+    /// the plugin still validates before trusting them.
+    /// </remarks>
+    Task OnApplySettings(ApplySettings apply, IPluginServices services, CancellationToken ct)
+        => Task.CompletedTask;
+
+    /// <summary>
     /// Connected, reconnecting, ticks dropped, ended. Called synchronously on the host's loop, so it
     /// must not block; anything slow belongs on the next tick.
     /// </summary>

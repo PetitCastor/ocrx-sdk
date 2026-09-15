@@ -1,0 +1,173 @@
+using Ocrx.Contracts;
+using Xunit;
+
+namespace Ocrx.Sdk.Tests;
+
+/// <summary>
+/// The plugin-facing settings surface (PSET-03): the host routes an engine-forwarded
+/// <see cref="ApplySettings"/> to the plugin under the same one-failure-survives rule a tick gets,
+/// a plugin publishes and rebuilds through <see cref="IPluginServices"/>, the output pipeline can
+/// swap its composed sink live, and a config persists and reloads.
+/// </summary>
+public class PluginSettingsSurfaceTests
+{
+    private static TickDispatcher Dispatcher(StubPlugin plugin, out RecordingOutput output)
+    {
+        output = new RecordingOutput();
+        var services = new PluginServices([], output, verbose: true, dumpFrame: null);
+        return new TickDispatcher(plugin, services, output);
+    }
+
+    private static CaptureRecord Record(string text = "SETUP")
+        => new(DateTime.UtcNow, "plugin", TriggerKind.Auto, text);
+
+    // ---------- dispatch of a forwarded edit ----------
+
+    [Fact]
+    public async Task AnApply_ReachesTheOnApplySettingsHook()
+    {
+        var plugin = new StubPlugin();
+        var dispatcher = Dispatcher(plugin, out _);
+
+        await dispatcher.ApplySettingsAsync(
+            new ApplySettings([new SettingsValue("theme", "dark")]), default);
+
+        var apply = Assert.Single(plugin.Applied);
+        var value = Assert.Single(apply.Values);
+        Assert.Equal("theme", value.Id);
+        Assert.Equal("dark", value.Value);
+    }
+
+    /// <summary>One bad apply must not end the run, exactly as one bad tick does not.</summary>
+    [Fact]
+    public async Task WhenTheApplyThrows_TheFailureIsLoggedAndSwallowed()
+    {
+        var plugin = new StubPlugin(
+            onApply: (_, _, _) => throw new InvalidOperationException("validate exploded"))
+        {
+            Name = "signature",
+        };
+        var dispatcher = Dispatcher(plugin, out var output);
+
+        await dispatcher.ApplySettingsAsync(new ApplySettings([]), default);
+
+        Assert.Contains("settings apply failed", output.Text);
+        Assert.Contains("validate exploded", output.Text);
+    }
+
+    /// <summary>A cancellation is the run ending, not a per-apply failure, so it propagates.</summary>
+    [Fact]
+    public async Task WhenTheApplyCancels_ItPropagates()
+    {
+        var plugin = new StubPlugin(
+            onApply: (_, _, _) => throw new OperationCanceledException());
+        var dispatcher = Dispatcher(plugin, out _);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => dispatcher.ApplySettingsAsync(new ApplySettings([]), default));
+    }
+
+    // ---------- publish / rebuild through the services ----------
+
+    [Fact]
+    public async Task PublishSettings_WithNoLiveSession_IsANoOp()
+    {
+        var services = new PluginServices([], new RecordingOutput(), verbose: false, dumpFrame: null);
+
+        // No Session set — the ordinary "between connects" state. Must not throw; the plugin
+        // re-publishes on the next connect.
+        await services.PublishSettingsAsync(SettingsSpec.Empty);
+    }
+
+    [Fact]
+    public async Task RebuildOutputs_InvokesTheHostHandlerWithTheConfig()
+    {
+        var services = new PluginServices([], new RecordingOutput(), verbose: false, dumpFrame: null);
+        PluginConfig? seen = null;
+        services.RebuildOutputsHandler = (cfg, _) => { seen = cfg; return Task.CompletedTask; };
+        var config = new BareConfig { PipeName = "P" };
+
+        await services.RebuildOutputsAsync(config);
+
+        Assert.Same(config, seen);
+    }
+
+    [Fact]
+    public async Task RebuildOutputs_WithNoHandler_IsANoOp()
+    {
+        var services = new PluginServices([], new RecordingOutput(), verbose: false, dumpFrame: null);
+
+        // A test double or embedding host that never wired the seam: the default path does nothing.
+        await services.RebuildOutputsAsync(new BareConfig());
+    }
+
+    // ---------- live sink swap ----------
+
+    [Fact]
+    public async Task ReplaceSink_SwapsLive_DisposingTheOldAndDeliveringToTheNew()
+    {
+        var output = new RecordingOutput();
+        var first = new FakeRecordSink();
+        var pipeline = new PluginOutputPipeline(first, output);
+        pipeline.Start(CancellationToken.None);
+
+        var second = new FakeRecordSink();
+        await pipeline.ReplaceSinkAsync(second);
+
+        Assert.True(first.Disposed);
+
+        var record = Record();
+        pipeline.Enqueue(record);
+        await pipeline.CompleteAndDrainAsync();
+
+        Assert.Contains(record, second.Received);
+        Assert.Empty(first.Received);
+        Assert.True(second.Disposed);
+    }
+
+    // ---------- config persist ----------
+
+    [Fact]
+    public void Save_RoundTripsThroughLoad_IncludingDerivedFields()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"ocrx-cfg-{Guid.NewGuid():N}.json");
+        try
+        {
+            new SaveConfig { PipeName = "PipeX", Theme = "midnight" }.Save(path);
+
+            var loaded = PluginConfig.Load<SaveConfig>(path);
+
+            Assert.Equal("PipeX", loaded.PipeName);
+            Assert.Equal("midnight", loaded.Theme);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Save_CreatesMissingDirectories()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"ocrx-cfg-{Guid.NewGuid():N}");
+        var path = Path.Combine(dir, "nested", "config.json");
+        try
+        {
+            new SaveConfig().Save(path);
+
+            Assert.True(File.Exists(path));
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    private sealed class BareConfig : PluginConfig;
+
+    private sealed class SaveConfig : PluginConfig
+    {
+        public string Theme { get; set; } = "light";
+    }
+}

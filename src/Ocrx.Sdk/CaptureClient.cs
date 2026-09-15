@@ -291,6 +291,14 @@ public sealed class TrackSession : IAsyncDisposable
     /// <summary>Build of the engine on the other end, as it reported itself in the handshake.</summary>
     public string EngineVersion { get; private set; } = string.Empty;
 
+    /// <summary>
+    /// Invoked for each <see cref="ApplySettings"/> the engine forwards down the response stream —
+    /// a user editing this plugin's settings in the panel. Runs inline on the tick loop, between
+    /// ticks, so it never overlaps a tick. Null until the host wires it; a null handler drops the
+    /// message, which is what an older host with no settings support does.
+    /// </summary>
+    internal Func<ApplySettings, CancellationToken, Task>? ApplySettingsHandler { get; set; }
+
     /// <summary>Ticks as they arrive. Completes normally when the server ends the stream
     /// (replay finished / engine shutdown); throws RpcException(Unavailable) if the pipe drops,
     /// and OperationCanceledException — not RpcException(Cancelled) — when either
@@ -299,6 +307,17 @@ public sealed class TrackSession : IAsyncDisposable
     {
         await foreach (var response in _call.ResponseStream.ReadAllAsync(ct))
         {
+            // Settings edits ride the same response stream but are not ticks: dispatch them to the
+            // host's handler and keep going, so Ticks still yields only ticks and per-tick
+            // atomicity is unaffected.
+            if (response.MsgCase == TrackResponse.MsgOneofCase.ApplySettings)
+            {
+                if (ApplySettingsHandler is { } handler)
+                    await handler(ApplySettings.FromProto(response.ApplySettings), ct);
+
+                continue;
+            }
+
             // Forward compatibility: a future engine may add response kinds, and an older plugin
             // must ignore them rather than treat an unset oneof as an empty tick.
             if (response.MsgCase != TrackResponse.MsgOneofCase.Tick)
@@ -306,6 +325,17 @@ public sealed class TrackSession : IAsyncDisposable
 
             yield return TickData.From(response.Tick);
         }
+    }
+
+    /// <summary>
+    /// Sends the plugin's current <see cref="SettingsSpec"/> up the request stream. Serialised with
+    /// every other request-stream writer through the same gate, so it is safe to call from the tick
+    /// loop while a tracker thread may be updating ROIs.
+    /// </summary>
+    public Task PublishSettingsAsync(SettingsSpec spec)
+    {
+        ArgumentNullException.ThrowIfNull(spec);
+        return SendAsync(new TrackRequest { Settings = spec.ToProto() });
     }
 
     /// <summary>Full-replacement update of the subscribed set.</summary>

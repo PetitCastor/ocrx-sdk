@@ -233,9 +233,10 @@ public static class ConfigSeed
     /// Writes through a temporary file in the same directory, then replaces. <see cref="Ensure"/>
     /// is the only thing here that touches a file the user may have edited, and a plain
     /// <c>WriteAllText</c> truncates before it writes — a crash or a full disk mid-write would
-    /// leave them with the empty config this class exists to protect them from.
+    /// leave them with the empty config this class exists to protect them from. Shared with
+    /// <see cref="PluginConfig.Save"/>, which persists a settings change under the same guarantee.
     /// </summary>
-    private static void Write(string path, string content)
+    internal static void Write(string path, string content)
     {
         var temp = path + ".tmp";
         try
