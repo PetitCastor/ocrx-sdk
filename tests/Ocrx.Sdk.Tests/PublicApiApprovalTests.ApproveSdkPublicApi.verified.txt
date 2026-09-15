@@ -4,6 +4,11 @@
 [assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace Ocrx.Sdk
 {
+    public sealed class ApplySettings : System.IEquatable<Ocrx.Sdk.ApplySettings>
+    {
+        public ApplySettings(System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.SettingsValue> Values) { }
+        public System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.SettingsValue> Values { get; init; }
+    }
     public sealed class CaptureClient : System.IDisposable
     {
         public CaptureClient(string pipeName = "OCRX.Engine") { }
@@ -265,6 +270,45 @@ namespace Ocrx.Sdk
     public sealed class SessionFaultedException : Ocrx.Sdk.OcrxException
     {
         public SessionFaultedException(string message, System.Exception? innerException = null) { }
+    }
+    public sealed class SettingsField : System.IEquatable<Ocrx.Sdk.SettingsField>
+    {
+        public SettingsField(string Id, string Label, Ocrx.Sdk.SettingsFieldType Type, string Value, string Help = "", System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.SettingsOption>? Options = null, double? Min = default, double? Max = default, string Group = "") { }
+        public string Group { get; init; }
+        public string Help { get; init; }
+        public string Id { get; init; }
+        public string Label { get; init; }
+        public double? Max { get; init; }
+        public double? Min { get; init; }
+        public System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.SettingsOption>? Options { get; init; }
+        public Ocrx.Sdk.SettingsFieldType Type { get; init; }
+        public string Value { get; init; }
+    }
+    public enum SettingsFieldType
+    {
+        Select = 0,
+        Toggle = 1,
+        Int = 2,
+        Float = 3,
+        String = 4,
+    }
+    public sealed class SettingsOption : System.IEquatable<Ocrx.Sdk.SettingsOption>
+    {
+        public SettingsOption(string Value, string Label) { }
+        public string Label { get; init; }
+        public string Value { get; init; }
+    }
+    public sealed class SettingsSpec : System.IEquatable<Ocrx.Sdk.SettingsSpec>
+    {
+        public SettingsSpec(System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.SettingsField> Fields) { }
+        public System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.SettingsField> Fields { get; init; }
+        public static Ocrx.Sdk.SettingsSpec Empty { get; }
+    }
+    public sealed class SettingsValue : System.IEquatable<Ocrx.Sdk.SettingsValue>
+    {
+        public SettingsValue(string Id, string Value) { }
+        public string Id { get; init; }
+        public string Value { get; init; }
     }
     public sealed class SinkSpec
     {
