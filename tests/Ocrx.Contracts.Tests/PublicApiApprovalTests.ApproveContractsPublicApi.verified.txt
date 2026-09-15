@@ -543,6 +543,8 @@ namespace Ocrx.Contracts.Proto
         public SettingsField() { }
         public SettingsField(Ocrx.Contracts.Proto.SettingsField other) { }
         public string Group { get; set; }
+        public bool HasMax { get; }
+        public bool HasMin { get; }
         public string Help { get; set; }
         public string Id { get; set; }
         public string Label { get; set; }
@@ -554,6 +556,8 @@ namespace Ocrx.Contracts.Proto
         public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
         public static Google.Protobuf.MessageParser<Ocrx.Contracts.Proto.SettingsField> Parser { get; }
         public int CalculateSize() { }
+        public void ClearMax() { }
+        public void ClearMin() { }
         public Ocrx.Contracts.Proto.SettingsField Clone() { }
         public bool Equals(Ocrx.Contracts.Proto.SettingsField other) { }
         public override bool Equals(object other) { }

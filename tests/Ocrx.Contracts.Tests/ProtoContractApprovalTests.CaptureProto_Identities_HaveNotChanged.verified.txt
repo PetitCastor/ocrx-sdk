@@ -673,7 +673,7 @@
           "MessageType": null,
           "EnumType": null,
           "Label": "Singular",
-          "Oneof": null
+          "Oneof": "_min"
         },
         {
           "FieldNumber": 8,
@@ -683,7 +683,7 @@
           "MessageType": null,
           "EnumType": null,
           "Label": "Singular",
-          "Oneof": null
+          "Oneof": "_max"
         },
         {
           "FieldNumber": 9,

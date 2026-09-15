@@ -206,14 +206,17 @@ message SettingsOption {
 }
 
 message SettingsField {
-  string id = 1;      // opaque to the engine; the plugin's own key for the field
+  // Opaque to the engine; non-empty and unique within a SettingsSpec, so an ApplySettings value
+  // identifies exactly one field.
+  string id = 1;
   string label = 2;
   string help = 3;
   SettingsFieldType type = 4;
   string value = 5;   // current value, as a string
   repeated SettingsOption options = 6;  // SELECT only; the closed set of choices
-  double min = 7;     // INT/FLOAT only
-  double max = 8;     // INT/FLOAT only
+  // INT/FLOAT only. Presence distinguishes an unbounded side from a valid zero bound.
+  optional double min = 7;
+  optional double max = 8;
   string group = 9;   // optional section header the engine may group by
 }
 
