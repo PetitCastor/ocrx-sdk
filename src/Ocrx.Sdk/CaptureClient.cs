@@ -313,7 +313,7 @@ public sealed class TrackSession : IAsyncDisposable
             if (response.MsgCase == TrackResponse.MsgOneofCase.ApplySettings)
             {
                 if (ApplySettingsHandler is { } handler)
-                    await handler(ApplySettings.FromProto(response.ApplySettings), ct);
+                    await handler(response.ApplySettings.ToApplySettings(), ct);
 
                 continue;
             }

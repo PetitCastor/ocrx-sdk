@@ -67,11 +67,11 @@ internal sealed class PluginServices : IPluginServices
         OcrLanguage: "", ConnectedClients: [], ScanInterval: EngineDefaults.DefaultScanInterval);
 
     /// <summary>
-    /// The live Track session, set by the host on every connect and left pointing at the last one
-    /// after a disconnect. <see cref="PublishSettingsAsync"/> writes through it; a disposed one is
-    /// treated as "no session", since the plugin re-publishes on the next connect.
+    /// The current session's settings writer, installed by the host after each successful Track
+    /// handshake. A delegate keeps this class testable without manufacturing a gRPC stream; it is
+    /// always the live <see cref="TrackSession.PublishSettingsAsync"/> method in production.
     /// </summary>
-    internal TrackSession? Session { get; set; }
+    internal Func<SettingsSpec, CancellationToken, Task>? PublishSettingsHandler { get; set; }
 
     /// <summary>
     /// Recomposes and swaps the run's output sinks from a config. Supplied by the host, which owns
@@ -84,12 +84,12 @@ internal sealed class PluginServices : IPluginServices
     {
         ArgumentNullException.ThrowIfNull(spec);
 
-        if (Session is not { } session)
+        if (PublishSettingsHandler is not { } publish)
             return;
 
         try
         {
-            await session.PublishSettingsAsync(spec);
+            await publish(spec, ct);
         }
         catch (Exception ex) when (ex is ObjectDisposedException or RpcException
             or OperationCanceledException && !ct.IsCancellationRequested)

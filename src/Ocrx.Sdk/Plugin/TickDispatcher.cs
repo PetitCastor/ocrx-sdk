@@ -46,6 +46,28 @@ internal sealed class TickDispatcher
         _failures.Reset();
     }
 
+    /// <summary>
+    /// Gives a plugin its live services at the beginning of a Track session. The host awaits this
+    /// before reading ticks, so a plugin can publish its initial settings spec without racing the
+    /// first tick or using an unobserved fire-and-forget task from <see cref="IOcrxPlugin.OnSessionEvent"/>.
+    /// </summary>
+    public async Task OnConnectedAsync(CancellationToken ct)
+    {
+        try
+        {
+            await _plugin.OnConnectedAsync(_services, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _output.WriteLine(
+                $"[{DateTime.Now:HH:mm:ss.fff}] {_plugin.Name}: connection initialization failed: {ex.Message}");
+        }
+    }
+
     /// <summary>Applies the policies and hands the tick to the plugin.</summary>
     public async Task DispatchAsync(TickData tick, CancellationToken ct)
     {

@@ -80,6 +80,30 @@ public class PluginSettingsSurfaceTests
     }
 
     [Fact]
+    public async Task OnConnect_ProvidesLiveServicesForTheInitialSettingsSpec()
+    {
+        var spec = new SettingsSpec(
+            [new SettingsField("theme", "Theme", SettingsFieldType.Select, "light")]);
+        SettingsSpec? published = null;
+        var plugin = new StubPlugin(onConnected: async (services, ct) =>
+            await services.PublishSettingsAsync(spec, ct));
+        var output = new RecordingOutput();
+        var services = new PluginServices([], output, verbose: false, dumpFrame: null)
+        {
+            PublishSettingsHandler = (actual, _) =>
+            {
+                published = actual;
+                return Task.CompletedTask;
+            },
+        };
+        var dispatcher = new TickDispatcher(plugin, services, output);
+
+        await dispatcher.OnConnectedAsync(default);
+
+        Assert.Same(spec, published);
+    }
+
+    [Fact]
     public async Task RebuildOutputs_InvokesTheHostHandlerWithTheConfig()
     {
         var services = new PluginServices([], new RecordingOutput(), verbose: false, dumpFrame: null);
@@ -156,6 +180,54 @@ public class PluginSettingsSurfaceTests
             new SaveConfig().Save(path);
 
             Assert.True(File.Exists(path));
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ApplyPersistRebuildAndPublishAsync_PersistsRebuildsAndPublishes()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"ocrx-settings-{Guid.NewGuid():N}");
+        var path = Path.Combine(dir, "config.json");
+        var output = new RecordingOutput();
+        var services = new PluginServices([], output, verbose: false, dumpFrame: null);
+        PluginConfig? rebuilt = null;
+        SettingsSpec? published = null;
+        services.RebuildOutputsHandler = (cfg, _) => { rebuilt = cfg; return Task.CompletedTask; };
+        services.PublishSettingsHandler = (spec, _) =>
+        {
+            published = spec;
+            return Task.CompletedTask;
+        };
+        var config = new SaveConfig { Theme = "light" };
+
+        try
+        {
+            await PluginSettings.ApplyPersistRebuildAndPublishAsync(
+                config,
+                path,
+                new ApplySettings([new SettingsValue("theme", "dark")]),
+                services,
+                (cfg, apply, _) =>
+                {
+                    var value = Assert.Single(apply.Values);
+                    Assert.Equal("theme", value.Id);
+                    cfg.Theme = value.Value;
+                    return Task.CompletedTask;
+                },
+                cfg => new SettingsSpec([new SettingsField("theme", "Theme", SettingsFieldType.String, cfg.Theme)]));
+
+            var saved = PluginConfig.Load<SaveConfig>(path);
+            Assert.Equal("dark", saved.Theme);
+            Assert.Same(config, rebuilt);
+            Assert.NotNull(published);
+            var publishedField = Assert.Single(published!.Fields);
+            Assert.Equal("theme", publishedField.Id);
+            Assert.Equal("dark", publishedField.Value);
         }
         finally
         {

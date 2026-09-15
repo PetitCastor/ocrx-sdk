@@ -90,6 +90,7 @@ namespace Ocrx.Sdk
         string Name { get; }
         System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.RoiSubscription> Rois { get; }
         System.Threading.Tasks.Task OnApplySettings(Ocrx.Sdk.ApplySettings apply, Ocrx.Sdk.IPluginServices services, System.Threading.CancellationToken ct);
+        System.Threading.Tasks.Task OnConnectedAsync(Ocrx.Sdk.IPluginServices services, System.Threading.CancellationToken ct);
         System.Threading.Tasks.Task OnManualTickAsync(Ocrx.Sdk.TickContext ctx, System.Threading.CancellationToken ct);
         void OnSessionEvent(Ocrx.Sdk.SessionEvent evt);
         System.Threading.Tasks.Task OnTickAsync(Ocrx.Sdk.TickContext ctx, System.Threading.CancellationToken ct);
@@ -200,6 +201,13 @@ namespace Ocrx.Sdk
         public System.Action<Ocrx.Sdk.CaptureRecord>? RecordSink { get; init; }
         public System.Threading.CancellationToken ShutdownToken { get; init; }
         public System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.IRecordSink>? Sinks { get; init; }
+    }
+    public static class PluginSettings
+    {
+        public static System.Threading.Tasks.Task ApplyPersistRebuildAndPublishAsync<TConfig>(TConfig config, string configPath, Ocrx.Sdk.ApplySettings apply, Ocrx.Sdk.IPluginServices services, System.Func<TConfig, Ocrx.Sdk.ApplySettings, System.Threading.CancellationToken, System.Threading.Tasks.Task> validateAndApply, System.Func<TConfig, Ocrx.Sdk.SettingsSpec> buildSpec, System.Threading.CancellationToken ct = default)
+            where TConfig : Ocrx.Sdk.PluginConfig { }
+        public static TConfig LoadLocalConfig<TConfig>(System.Reflection.Assembly assembly, string resourceName, string pluginFolder, string fileName = "config.json")
+            where TConfig : Ocrx.Sdk.PluginConfig, new () { }
     }
     public sealed class ProtocolMismatchException : Ocrx.Sdk.OcrxException
     {
