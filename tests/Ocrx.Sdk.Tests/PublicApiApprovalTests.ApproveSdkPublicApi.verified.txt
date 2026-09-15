@@ -182,6 +182,8 @@ namespace Ocrx.Sdk
         public string PipeName { get; set; }
         public bool SaveDebugFrames { get; set; }
         protected virtual void AfterLoad(string configPath) { }
+        public TConfig CloneForSettings<TConfig>()
+            where TConfig : Ocrx.Sdk.PluginConfig { }
         public void Save(string path) { }
         public static T Load<T>(string path)
             where T : Ocrx.Sdk.PluginConfig, new () { }
@@ -204,7 +206,7 @@ namespace Ocrx.Sdk
     }
     public static class PluginSettings
     {
-        public static System.Threading.Tasks.Task ApplyPersistRebuildAndPublishAsync<TConfig>(TConfig config, string configPath, Ocrx.Sdk.ApplySettings apply, Ocrx.Sdk.IPluginServices services, System.Func<TConfig, Ocrx.Sdk.ApplySettings, System.Threading.CancellationToken, System.Threading.Tasks.Task> validateAndApply, System.Func<TConfig, Ocrx.Sdk.SettingsSpec> buildSpec, System.Threading.CancellationToken ct = default)
+        public static System.Threading.Tasks.Task<TConfig> ApplyPersistRebuildAndPublishAsync<TConfig>(TConfig config, string configPath, Ocrx.Sdk.ApplySettings apply, Ocrx.Sdk.IPluginServices services, System.Func<TConfig, Ocrx.Sdk.ApplySettings, System.Threading.CancellationToken, System.Threading.Tasks.Task> validateAndApply, System.Func<TConfig, Ocrx.Sdk.SettingsSpec> buildSpec, System.Threading.CancellationToken ct = default)
             where TConfig : Ocrx.Sdk.PluginConfig { }
         public static TConfig LoadLocalConfig<TConfig>(System.Reflection.Assembly assembly, string resourceName, string pluginFolder, string fileName = "config.json")
             where TConfig : Ocrx.Sdk.PluginConfig, new () { }
@@ -376,6 +378,7 @@ namespace Ocrx.Sdk
         public uint NegotiatedProtocol { get; }
         public System.Threading.Tasks.ValueTask DisposeAsync() { }
         public System.Threading.Tasks.Task PublishSettingsAsync(Ocrx.Sdk.SettingsSpec spec) { }
+        public System.Threading.Tasks.Task PublishSettingsAsync(Ocrx.Sdk.SettingsSpec spec, System.Threading.CancellationToken ct) { }
         public System.Collections.Generic.IAsyncEnumerable<Ocrx.Sdk.TickData> Ticks([System.Runtime.CompilerServices.EnumeratorCancellation] System.Threading.CancellationToken ct) { }
         public System.Threading.Tasks.Task UpdateRoisAsync(System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.RoiSubscription> rois) { }
     }

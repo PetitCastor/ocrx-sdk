@@ -69,7 +69,7 @@ internal sealed class PluginServices : IPluginServices
     /// <summary>
     /// The current session's settings writer, installed by the host after each successful Track
     /// handshake. A delegate keeps this class testable without manufacturing a gRPC stream; it is
-    /// always the live <see cref="TrackSession.PublishSettingsAsync"/> method in production.
+    /// always the live <see cref="TrackSession.PublishSettingsAsync(SettingsSpec, CancellationToken)"/> method in production.
     /// </summary>
     internal Func<SettingsSpec, CancellationToken, Task>? PublishSettingsHandler { get; set; }
 

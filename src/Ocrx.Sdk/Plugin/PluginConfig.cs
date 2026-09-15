@@ -47,6 +47,10 @@ public abstract class PluginConfig
         WriteIndented = true,
     };
 
+    // Load resolves output paths for runtime use, but settings persistence must retain the relative
+    // spelling the user wrote. The slots mirror Outputs by index and carry null for rooted paths.
+    private List<string?> _persistedOutputPaths = [];
+
     /// <summary>
     /// Loads the config, writing a defaults file on first run so the settings are discoverable
     /// without documentation. Same contract as the monolith's ProbeConfig.Load.
@@ -63,6 +67,7 @@ public abstract class PluginConfig
             var defaults = new T();
             File.WriteAllText(path, JsonSerializer.Serialize(defaults, JsonOptions));
             NormalizeOutputs(defaults);
+            CapturePersistedOutputPaths(defaults);
             defaults.AfterLoad(path);
             ResolveOutputPaths(defaults, path);
             return defaults;
@@ -70,9 +75,25 @@ public abstract class PluginConfig
 
         var config = JsonSerializer.Deserialize<T>(File.ReadAllText(path), JsonOptions) ?? new T();
         NormalizeOutputs(config);
+        CapturePersistedOutputPaths(config);
         config.AfterLoad(path);
         ResolveOutputPaths(config, path);
         return config;
+    }
+
+    /// <summary>
+    /// Creates an independent candidate for a settings apply. The candidate retains the loaded
+    /// config's relative output-path forms so a successful unrelated edit does not make those paths
+    /// absolute when persisted.
+    /// </summary>
+    public TConfig CloneForSettings<TConfig>() where TConfig : PluginConfig
+    {
+        var json = JsonSerializer.Serialize(this, GetType(), JsonOptions);
+        var clone = JsonSerializer.Deserialize(json, GetType(), JsonOptions) as TConfig
+            ?? throw new InvalidOperationException($"Could not clone {GetType().FullName}.");
+
+        clone._persistedOutputPaths = [.. _persistedOutputPaths];
+        return clone;
     }
 
     /// <summary>
@@ -91,15 +112,6 @@ public abstract class PluginConfig
     /// This is a full rewrite of the modelled settings, not a merge: a key the config type does not
     /// bind is not preserved, exactly as <see cref="Load{T}"/> already ignores it.
     /// </para>
-    /// <para>
-    /// Known limitation: <see cref="Load{T}"/> resolves every relative <see cref="SinkSpec.Path"/>
-    /// under <see cref="Outputs"/> to an absolute path in memory, and this writes the object as it
-    /// stands — so saving a config that carries a <c>"json"</c>/<c>"csv"</c> output with a relative
-    /// path persists that path absolute, losing its portability. It is safe for the case this method
-    /// exists to serve, a settings apply over an <c>"overlay"</c> output, which carries no path at
-    /// all. A plugin that persists file-sink paths through settings wants relative paths preserved,
-    /// which is a change to the shared load-time resolution and is deliberately out of scope here.
-    /// </para>
     /// </remarks>
     public void Save(string path)
     {
@@ -108,8 +120,28 @@ public abstract class PluginConfig
         var full = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(full)!);
 
-        // The same crash-safe temp-then-replace ConfigSeed uses to protect a file the user edits.
-        ConfigSeed.Write(full, JsonSerializer.Serialize(this, GetType(), JsonOptions));
+        var restored = RestorePersistedRelativePaths(full);
+        try
+        {
+            // The same crash-safe temp-then-replace ConfigSeed uses to protect a file the user edits.
+            ConfigSeed.Write(full, JsonSerializer.Serialize(this, GetType(), JsonOptions));
+        }
+        finally
+        {
+            foreach (var (spec, resolvedPath) in restored)
+                spec.Path = resolvedPath;
+        }
+
+        _persistedOutputPaths = Outputs.Select((spec, index) =>
+        {
+            if (spec is null || string.IsNullOrWhiteSpace(spec.Path))
+                return null;
+
+            return index < _persistedOutputPaths.Count && _persistedOutputPaths[index] is { } original
+                   && string.Equals(spec.Path, ResolveAgainstConfig(original, full), StringComparison.OrdinalIgnoreCase)
+                ? original
+                : Path.IsPathRooted(spec.Path) ? null : spec.Path;
+        }).ToList();
     }
 
     /// <summary>
@@ -125,6 +157,31 @@ public abstract class PluginConfig
     /// or sink construction.
     /// </summary>
     private static void NormalizeOutputs(PluginConfig config) => config.Outputs ??= [];
+
+    private static void CapturePersistedOutputPaths(PluginConfig config) =>
+        config._persistedOutputPaths = config.Outputs.Select(spec =>
+            spec is { Path: { } path } && !Path.IsPathRooted(path) ? path : null).ToList();
+
+    private List<(SinkSpec Spec, string ResolvedPath)> RestorePersistedRelativePaths(string configPath)
+    {
+        var restored = new List<(SinkSpec Spec, string ResolvedPath)>();
+        for (var index = 0; index < Outputs.Count && index < _persistedOutputPaths.Count; index++)
+        {
+            var spec = Outputs[index];
+            var original = _persistedOutputPaths[index];
+            if (spec is null || string.IsNullOrWhiteSpace(original) || string.IsNullOrWhiteSpace(spec.Path))
+                continue;
+
+            var resolved = ResolveAgainstConfig(original, configPath);
+            if (!string.Equals(spec.Path, resolved, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            restored.Add((spec, spec.Path));
+            spec.Path = original;
+        }
+
+        return restored;
+    }
 
     /// <summary>
     /// Resolves every <see cref="SinkSpec.Path"/> in <see cref="Outputs"/> against the config file's

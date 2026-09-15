@@ -19,7 +19,7 @@ public static class PluginSettings
         return PluginConfig.Load<TConfig>(path);
     }
 
-    public static async Task ApplyPersistRebuildAndPublishAsync<TConfig>(
+    public static async Task<TConfig> ApplyPersistRebuildAndPublishAsync<TConfig>(
         TConfig config,
         string configPath,
         ApplySettings apply,
@@ -36,9 +36,11 @@ public static class PluginSettings
         ArgumentNullException.ThrowIfNull(validateAndApply);
         ArgumentNullException.ThrowIfNull(buildSpec);
 
-        await validateAndApply(config, apply, ct);
-        config.Save(configPath);
-        await services.RebuildOutputsAsync(config, ct);
-        await services.PublishSettingsAsync(buildSpec(config), ct);
+        var candidate = config.CloneForSettings<TConfig>();
+        await validateAndApply(candidate, apply, ct);
+        candidate.Save(configPath);
+        await services.RebuildOutputsAsync(candidate, ct);
+        await services.PublishSettingsAsync(buildSpec(candidate), ct);
+        return candidate;
     }
 }

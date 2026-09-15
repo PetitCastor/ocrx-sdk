@@ -65,7 +65,7 @@ internal sealed class PluginSessionRunner
                     // publishes its initial spec there, so the engine has it before the first tick.
                     session.ApplySettingsHandler = _dispatcher.ApplySettingsAsync;
                     _services.PublishSettingsHandler = (spec, publishCt) =>
-                        session.PublishSettingsAsync(spec);
+                        session.PublishSettingsAsync(spec, publishCt);
                     _services.Engine = engine.WithSession(session);
                     _dispatcher.OnConnected();
                     reconnectAttempt = 0;
