@@ -90,7 +90,8 @@ the batch. For each value, the plugin should:
 1. Validate that the field id is known.
 2. Parse and validate the string value for that field.
 3. Apply every value to a candidate config, never the live config.
-4. Persist the candidate, rebuild its local sinks, and publish its fresh spec.
+4. Rebuild the candidate's local sinks and publish its fresh spec, then persist the candidate to
+   disk — in that order, so a failed rebuild never leaves the file ahead of the running sinks.
 5. Replace the live config only after that complete operation succeeds.
 
 ```csharp

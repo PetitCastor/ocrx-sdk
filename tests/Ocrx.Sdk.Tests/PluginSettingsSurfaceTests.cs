@@ -302,6 +302,88 @@ public class PluginSettingsSurfaceTests
         }
     }
 
+    [Fact]
+    public async Task ApplyPersistRebuildAndPublishAsync_WhenRebuildFails_PersistsNothing()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"ocrx-settings-{Guid.NewGuid():N}");
+        var path = Path.Combine(dir, "config.json");
+        var services = new PluginServices([], new RecordingOutput(), verbose: false, dumpFrame: null);
+        // The rebuild builds real sinks from the edited config and can throw on bad input. When it
+        // does, the file must not have been written — otherwise a restart reloads a config whose
+        // rebuild just failed.
+        services.RebuildOutputsHandler = (_, _) => throw new InvalidOperationException("bad sink");
+        var config = new SaveConfig { Theme = "light" };
+
+        try
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                PluginSettings.ApplyPersistRebuildAndPublishAsync(
+                    config,
+                    path,
+                    new ApplySettings([new SettingsValue("theme", "dark")]),
+                    services,
+                    (cfg, apply, _) =>
+                    {
+                        cfg.Theme = Assert.Single(apply.Values).Value;
+                        return Task.CompletedTask;
+                    },
+                    cfg => new SettingsSpec([new SettingsField("theme", "Theme", SettingsFieldType.String, cfg.Theme)])));
+
+            Assert.False(File.Exists(path));
+            Assert.Equal("light", config.Theme);
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ApplyPersistRebuildAndPublishAsync_WhenApplySetsANewRelativeOutputPath_RebuildsAbsoluteAndPersistsRelative()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"ocrx-settings-{Guid.NewGuid():N}");
+        var path = Path.Combine(dir, "config.json");
+        Directory.CreateDirectory(dir);
+        var initial = new SaveConfig
+        {
+            Outputs = [new SinkSpec { Type = "json", Path = "records.jsonl" }],
+        };
+        initial.Save(path);
+        var config = PluginConfig.Load<SaveConfig>(path);
+        var services = new PluginServices([], new RecordingOutput(), verbose: false, dumpFrame: null);
+        PluginConfig? rebuilt = null;
+        services.RebuildOutputsHandler = (cfg, _) => { rebuilt = cfg; return Task.CompletedTask; };
+
+        try
+        {
+            _ = await PluginSettings.ApplyPersistRebuildAndPublishAsync(
+                config,
+                path,
+                new ApplySettings([new SettingsValue("outputPath", "logs/new.jsonl")]),
+                services,
+                (cfg, apply, _) =>
+                {
+                    cfg.Outputs[0].Path = Assert.Single(apply.Values).Value;
+                    return Task.CompletedTask;
+                },
+                _ => SettingsSpec.Empty);
+
+            // The rebuild must see the edited path resolved against the config directory, not left
+            // relative to be re-rooted against the process CWD.
+            var rebuiltPath = Assert.Single(rebuilt!.Outputs).Path;
+            Assert.True(Path.IsPathRooted(rebuiltPath));
+            Assert.Equal(Path.GetFullPath(Path.Combine(dir, "logs", "new.jsonl")), rebuiltPath);
+
+            // The file keeps the relative spelling the user wrote.
+            Assert.Contains("\"path\": \"logs/new.jsonl\"", File.ReadAllText(path).Replace('\\', '/'));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
     private sealed class BareConfig : PluginConfig;
 
     private sealed class SaveConfig : PluginConfig

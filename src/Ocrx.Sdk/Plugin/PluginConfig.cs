@@ -150,6 +150,32 @@ public abstract class PluginConfig
     }
 
     /// <summary>
+    /// Reconciles output paths after a settings apply. A plugin's apply delegate may set a
+    /// <see cref="SinkSpec.Path"/> to a new relative literal (e.g. the user edits a file-sink path);
+    /// <see cref="Load{T}"/> and <see cref="CloneForSettings{TConfig}"/> both leave in-memory paths
+    /// absolute, so any path still relative here was written by the apply. For each such entry, record
+    /// the relative spelling for persistence and resolve the in-memory path to absolute — exactly what
+    /// <see cref="Load{T}"/> produces — so the following rebuild resolves against the config directory,
+    /// not the process CWD, and <see cref="Save"/> writes the relative form back.
+    /// </summary>
+    internal void ResolveSettingsOutputPaths(string configPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(configPath);
+
+        for (var index = 0; index < Outputs.Count; index++)
+        {
+            var spec = Outputs[index];
+            if (spec is null || string.IsNullOrWhiteSpace(spec.Path) || Path.IsPathRooted(spec.Path))
+                continue;
+
+            while (_persistedOutputPaths.Count <= index)
+                _persistedOutputPaths.Add(null);
+            _persistedOutputPaths[index] = spec.Path;
+            spec.Path = ResolveAgainstConfig(spec.Path, configPath);
+        }
+    }
+
+    /// <summary>
     /// Runs after the values are in place, on both the first-run and the read-back path. Override to
     /// resolve anything that depends on where the config file itself lives — a relative ledger path
     /// against the config's directory, for one. <paramref name="configPath"/> is the file that was
