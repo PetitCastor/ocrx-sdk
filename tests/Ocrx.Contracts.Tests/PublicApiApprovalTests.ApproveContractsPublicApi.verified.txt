@@ -135,6 +135,25 @@ namespace Ocrx.Contracts
 }
 namespace Ocrx.Contracts.Proto
 {
+    [System.Diagnostics.DebuggerDisplay("{ToString(),nq}")]
+    public sealed class ApplySettings : Google.Protobuf.IBufferMessage, Google.Protobuf.IDeepCloneable<Ocrx.Contracts.Proto.ApplySettings>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Ocrx.Contracts.Proto.ApplySettings>, System.IEquatable<Ocrx.Contracts.Proto.ApplySettings>
+    {
+        public const int ValuesFieldNumber = 1;
+        public ApplySettings() { }
+        public ApplySettings(Ocrx.Contracts.Proto.ApplySettings other) { }
+        public Google.Protobuf.Collections.RepeatedField<Ocrx.Contracts.Proto.SettingsValue> Values { get; }
+        public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
+        public static Google.Protobuf.MessageParser<Ocrx.Contracts.Proto.ApplySettings> Parser { get; }
+        public int CalculateSize() { }
+        public Ocrx.Contracts.Proto.ApplySettings Clone() { }
+        public bool Equals(Ocrx.Contracts.Proto.ApplySettings other) { }
+        public override bool Equals(object other) { }
+        public override int GetHashCode() { }
+        public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
+        public void MergeFrom(Ocrx.Contracts.Proto.ApplySettings other) { }
+        public override string ToString() { }
+        public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
+    }
     public static class CaptureEngineService
     {
         public static Google.Protobuf.Reflection.ServiceDescriptor Descriptor { get; }
@@ -510,6 +529,117 @@ namespace Ocrx.Contracts.Proto
         public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
     }
     [System.Diagnostics.DebuggerDisplay("{ToString(),nq}")]
+    public sealed class SettingsField : Google.Protobuf.IBufferMessage, Google.Protobuf.IDeepCloneable<Ocrx.Contracts.Proto.SettingsField>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Ocrx.Contracts.Proto.SettingsField>, System.IEquatable<Ocrx.Contracts.Proto.SettingsField>
+    {
+        public const int GroupFieldNumber = 9;
+        public const int HelpFieldNumber = 3;
+        public const int IdFieldNumber = 1;
+        public const int LabelFieldNumber = 2;
+        public const int MaxFieldNumber = 8;
+        public const int MinFieldNumber = 7;
+        public const int OptionsFieldNumber = 6;
+        public const int TypeFieldNumber = 4;
+        public const int ValueFieldNumber = 5;
+        public SettingsField() { }
+        public SettingsField(Ocrx.Contracts.Proto.SettingsField other) { }
+        public string Group { get; set; }
+        public string Help { get; set; }
+        public string Id { get; set; }
+        public string Label { get; set; }
+        public double Max { get; set; }
+        public double Min { get; set; }
+        public Google.Protobuf.Collections.RepeatedField<Ocrx.Contracts.Proto.SettingsOption> Options { get; }
+        public Ocrx.Contracts.Proto.SettingsFieldType Type { get; set; }
+        public string Value { get; set; }
+        public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
+        public static Google.Protobuf.MessageParser<Ocrx.Contracts.Proto.SettingsField> Parser { get; }
+        public int CalculateSize() { }
+        public Ocrx.Contracts.Proto.SettingsField Clone() { }
+        public bool Equals(Ocrx.Contracts.Proto.SettingsField other) { }
+        public override bool Equals(object other) { }
+        public override int GetHashCode() { }
+        public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
+        public void MergeFrom(Ocrx.Contracts.Proto.SettingsField other) { }
+        public override string ToString() { }
+        public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
+    }
+    public enum SettingsFieldType
+    {
+        [Google.Protobuf.Reflection.OriginalName("SETTINGS_FIELD_TYPE_UNSPECIFIED")]
+        Unspecified = 0,
+        [Google.Protobuf.Reflection.OriginalName("SETTINGS_FIELD_TYPE_SELECT")]
+        Select = 1,
+        [Google.Protobuf.Reflection.OriginalName("SETTINGS_FIELD_TYPE_TOGGLE")]
+        Toggle = 2,
+        [Google.Protobuf.Reflection.OriginalName("SETTINGS_FIELD_TYPE_INT")]
+        Int = 3,
+        [Google.Protobuf.Reflection.OriginalName("SETTINGS_FIELD_TYPE_FLOAT")]
+        Float = 4,
+        [Google.Protobuf.Reflection.OriginalName("SETTINGS_FIELD_TYPE_STRING")]
+        String = 5,
+    }
+    [System.Diagnostics.DebuggerDisplay("{ToString(),nq}")]
+    public sealed class SettingsOption : Google.Protobuf.IBufferMessage, Google.Protobuf.IDeepCloneable<Ocrx.Contracts.Proto.SettingsOption>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Ocrx.Contracts.Proto.SettingsOption>, System.IEquatable<Ocrx.Contracts.Proto.SettingsOption>
+    {
+        public const int LabelFieldNumber = 2;
+        public const int ValueFieldNumber = 1;
+        public SettingsOption() { }
+        public SettingsOption(Ocrx.Contracts.Proto.SettingsOption other) { }
+        public string Label { get; set; }
+        public string Value { get; set; }
+        public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
+        public static Google.Protobuf.MessageParser<Ocrx.Contracts.Proto.SettingsOption> Parser { get; }
+        public int CalculateSize() { }
+        public Ocrx.Contracts.Proto.SettingsOption Clone() { }
+        public bool Equals(Ocrx.Contracts.Proto.SettingsOption other) { }
+        public override bool Equals(object other) { }
+        public override int GetHashCode() { }
+        public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
+        public void MergeFrom(Ocrx.Contracts.Proto.SettingsOption other) { }
+        public override string ToString() { }
+        public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("{ToString(),nq}")]
+    public sealed class SettingsSpec : Google.Protobuf.IBufferMessage, Google.Protobuf.IDeepCloneable<Ocrx.Contracts.Proto.SettingsSpec>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Ocrx.Contracts.Proto.SettingsSpec>, System.IEquatable<Ocrx.Contracts.Proto.SettingsSpec>
+    {
+        public const int FieldsFieldNumber = 1;
+        public SettingsSpec() { }
+        public SettingsSpec(Ocrx.Contracts.Proto.SettingsSpec other) { }
+        public Google.Protobuf.Collections.RepeatedField<Ocrx.Contracts.Proto.SettingsField> Fields { get; }
+        public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
+        public static Google.Protobuf.MessageParser<Ocrx.Contracts.Proto.SettingsSpec> Parser { get; }
+        public int CalculateSize() { }
+        public Ocrx.Contracts.Proto.SettingsSpec Clone() { }
+        public bool Equals(Ocrx.Contracts.Proto.SettingsSpec other) { }
+        public override bool Equals(object other) { }
+        public override int GetHashCode() { }
+        public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
+        public void MergeFrom(Ocrx.Contracts.Proto.SettingsSpec other) { }
+        public override string ToString() { }
+        public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("{ToString(),nq}")]
+    public sealed class SettingsValue : Google.Protobuf.IBufferMessage, Google.Protobuf.IDeepCloneable<Ocrx.Contracts.Proto.SettingsValue>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Ocrx.Contracts.Proto.SettingsValue>, System.IEquatable<Ocrx.Contracts.Proto.SettingsValue>
+    {
+        public const int IdFieldNumber = 1;
+        public const int ValueFieldNumber = 2;
+        public SettingsValue() { }
+        public SettingsValue(Ocrx.Contracts.Proto.SettingsValue other) { }
+        public string Id { get; set; }
+        public string Value { get; set; }
+        public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
+        public static Google.Protobuf.MessageParser<Ocrx.Contracts.Proto.SettingsValue> Parser { get; }
+        public int CalculateSize() { }
+        public Ocrx.Contracts.Proto.SettingsValue Clone() { }
+        public bool Equals(Ocrx.Contracts.Proto.SettingsValue other) { }
+        public override bool Equals(object other) { }
+        public override int GetHashCode() { }
+        public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
+        public void MergeFrom(Ocrx.Contracts.Proto.SettingsValue other) { }
+        public override string ToString() { }
+        public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("{ToString(),nq}")]
     public sealed class StatusRequest : Google.Protobuf.IBufferMessage, Google.Protobuf.IDeepCloneable<Ocrx.Contracts.Proto.StatusRequest>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Ocrx.Contracts.Proto.StatusRequest>, System.IEquatable<Ocrx.Contracts.Proto.StatusRequest>
     {
         public StatusRequest() { }
@@ -597,11 +727,13 @@ namespace Ocrx.Contracts.Proto
     {
         public const int HelloFieldNumber = 1;
         public const int RoisFieldNumber = 2;
+        public const int SettingsFieldNumber = 3;
         public TrackRequest() { }
         public TrackRequest(Ocrx.Contracts.Proto.TrackRequest other) { }
         public Ocrx.Contracts.Proto.Hello Hello { get; set; }
         public Ocrx.Contracts.Proto.TrackRequest.MsgOneofCase MsgCase { get; }
         public Ocrx.Contracts.Proto.RoiSetUpdate Rois { get; set; }
+        public Ocrx.Contracts.Proto.SettingsSpec Settings { get; set; }
         public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
         public static Google.Protobuf.MessageParser<Ocrx.Contracts.Proto.TrackRequest> Parser { get; }
         public int CalculateSize() { }
@@ -619,15 +751,18 @@ namespace Ocrx.Contracts.Proto
             None = 0,
             Hello = 1,
             Rois = 2,
+            Settings = 3,
         }
     }
     [System.Diagnostics.DebuggerDisplay("{ToString(),nq}")]
     public sealed class TrackResponse : Google.Protobuf.IBufferMessage, Google.Protobuf.IDeepCloneable<Ocrx.Contracts.Proto.TrackResponse>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Ocrx.Contracts.Proto.TrackResponse>, System.IEquatable<Ocrx.Contracts.Proto.TrackResponse>
     {
+        public const int ApplySettingsFieldNumber = 3;
         public const int HelloAckFieldNumber = 2;
         public const int TickFieldNumber = 1;
         public TrackResponse() { }
         public TrackResponse(Ocrx.Contracts.Proto.TrackResponse other) { }
+        public Ocrx.Contracts.Proto.ApplySettings ApplySettings { get; set; }
         public Ocrx.Contracts.Proto.HelloAck HelloAck { get; set; }
         public Ocrx.Contracts.Proto.TrackResponse.MsgOneofCase MsgCase { get; }
         public Ocrx.Contracts.Proto.TickResult Tick { get; set; }
@@ -648,6 +783,7 @@ namespace Ocrx.Contracts.Proto
             None = 0,
             Tick = 1,
             HelloAck = 2,
+            ApplySettings = 3,
         }
     }
 }
