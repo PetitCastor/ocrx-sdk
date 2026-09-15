@@ -109,8 +109,12 @@ internal sealed class PluginOutputPipeline
         if (_drain is not null)
             await _drain;
 
-        // The drain has stopped, so nothing else touches _sink; no gate needed here.
-        await _sink.DisposeAsync();
+        // The drain has stopped, so the contract's callers no longer touch _sink. Still taken under
+        // the gate as defence: it costs nothing here and closes the window a plugin that called
+        // RebuildOutputsAsync from an unrelated background task would otherwise race.
+        await _sinkGate.WaitAsync(CancellationToken.None);
+        try { await _sink.DisposeAsync(); }
+        finally { _sinkGate.Release(); }
     }
 
     private async Task DrainAsync(CancellationToken ct)

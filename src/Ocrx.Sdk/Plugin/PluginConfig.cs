@@ -89,10 +89,16 @@ public abstract class PluginConfig
     /// </para>
     /// <para>
     /// This is a full rewrite of the modelled settings, not a merge: a key the config type does not
-    /// bind is not preserved, exactly as <see cref="Load{T}"/> already ignores it. Any
-    /// <see cref="SinkSpec.Path"/> under <see cref="Outputs"/> was resolved to an absolute path on
-    /// load, so it is persisted absolute — expected, since the overlay outputs a settings apply
-    /// rebuilds carry no path at all.
+    /// bind is not preserved, exactly as <see cref="Load{T}"/> already ignores it.
+    /// </para>
+    /// <para>
+    /// Known limitation: <see cref="Load{T}"/> resolves every relative <see cref="SinkSpec.Path"/>
+    /// under <see cref="Outputs"/> to an absolute path in memory, and this writes the object as it
+    /// stands — so saving a config that carries a <c>"json"</c>/<c>"csv"</c> output with a relative
+    /// path persists that path absolute, losing its portability. It is safe for the case this method
+    /// exists to serve, a settings apply over an <c>"overlay"</c> output, which carries no path at
+    /// all. A plugin that persists file-sink paths through settings wants relative paths preserved,
+    /// which is a change to the shared load-time resolution and is deliberately out of scope here.
     /// </para>
     /// </remarks>
     public void Save(string path)
@@ -102,20 +108,8 @@ public abstract class PluginConfig
         var full = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(full)!);
 
-        var json = JsonSerializer.Serialize(this, GetType(), JsonOptions);
-        var temp = full + ".tmp";
-        try
-        {
-            File.WriteAllText(temp, json);
-            File.Move(temp, full, overwrite: true);
-        }
-        catch
-        {
-            try { File.Delete(temp); }
-            catch (IOException) { /* the write's own exception matters more than the temp file. */ }
-
-            throw;
-        }
+        // The same crash-safe temp-then-replace ConfigSeed uses to protect a file the user edits.
+        ConfigSeed.Write(full, JsonSerializer.Serialize(this, GetType(), JsonOptions));
     }
 
     /// <summary>
