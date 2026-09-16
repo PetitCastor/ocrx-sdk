@@ -159,8 +159,13 @@ message TrackResponse {
     TickResult tick = 1;
     HelloAck hello_ack = 2;  // sent exactly once, before first tick, in response to Hello
     ApplySettings apply_settings = 3;  // engine forwards user edits down; see settings section
+    StreamEnd stream_end = 4;  // engine has no more responses; client must half-close Track
   }
 }
+
+// An in-band terminal marker. Its receipt is the client-visible proof that every preceding response
+// was delivered; the client then half-closes its request stream before the engine tears down the pipe.
+message StreamEnd {}
 
 message HelloAck {
   uint32 negotiated_protocol_version = 1;

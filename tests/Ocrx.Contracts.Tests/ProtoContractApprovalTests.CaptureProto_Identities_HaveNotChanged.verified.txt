@@ -519,8 +519,22 @@
           "EnumType": null,
           "Label": "Singular",
           "Oneof": "msg"
+        },
+        {
+          "FieldNumber": 4,
+          "Name": "stream_end",
+          "JsonName": "streamEnd",
+          "Type": "Message",
+          "MessageType": "capture.StreamEnd",
+          "EnumType": null,
+          "Label": "Singular",
+          "Oneof": "msg"
         }
       ]
+    },
+    {
+      "FullName": "capture.StreamEnd",
+      "Fields": []
     },
     {
       "FullName": "capture.HelloAck",
