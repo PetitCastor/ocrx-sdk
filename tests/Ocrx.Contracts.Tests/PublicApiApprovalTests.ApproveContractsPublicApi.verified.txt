@@ -698,6 +698,23 @@ namespace Ocrx.Contracts.Proto
         public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
     }
     [System.Diagnostics.DebuggerDisplay("{ToString(),nq}")]
+    public sealed class StreamEnd : Google.Protobuf.IBufferMessage, Google.Protobuf.IDeepCloneable<Ocrx.Contracts.Proto.StreamEnd>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Ocrx.Contracts.Proto.StreamEnd>, System.IEquatable<Ocrx.Contracts.Proto.StreamEnd>
+    {
+        public StreamEnd() { }
+        public StreamEnd(Ocrx.Contracts.Proto.StreamEnd other) { }
+        public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
+        public static Google.Protobuf.MessageParser<Ocrx.Contracts.Proto.StreamEnd> Parser { get; }
+        public int CalculateSize() { }
+        public Ocrx.Contracts.Proto.StreamEnd Clone() { }
+        public bool Equals(Ocrx.Contracts.Proto.StreamEnd other) { }
+        public override bool Equals(object other) { }
+        public override int GetHashCode() { }
+        public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
+        public void MergeFrom(Ocrx.Contracts.Proto.StreamEnd other) { }
+        public override string ToString() { }
+        public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
+    }
+    [System.Diagnostics.DebuggerDisplay("{ToString(),nq}")]
     public sealed class TickResult : Google.Protobuf.IBufferMessage, Google.Protobuf.IDeepCloneable<Ocrx.Contracts.Proto.TickResult>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Ocrx.Contracts.Proto.TickResult>, System.IEquatable<Ocrx.Contracts.Proto.TickResult>
     {
         public const int FrameHeightFieldNumber = 4;
@@ -763,12 +780,14 @@ namespace Ocrx.Contracts.Proto
     {
         public const int ApplySettingsFieldNumber = 3;
         public const int HelloAckFieldNumber = 2;
+        public const int StreamEndFieldNumber = 4;
         public const int TickFieldNumber = 1;
         public TrackResponse() { }
         public TrackResponse(Ocrx.Contracts.Proto.TrackResponse other) { }
         public Ocrx.Contracts.Proto.ApplySettings ApplySettings { get; set; }
         public Ocrx.Contracts.Proto.HelloAck HelloAck { get; set; }
         public Ocrx.Contracts.Proto.TrackResponse.MsgOneofCase MsgCase { get; }
+        public Ocrx.Contracts.Proto.StreamEnd StreamEnd { get; set; }
         public Ocrx.Contracts.Proto.TickResult Tick { get; set; }
         public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
         public static Google.Protobuf.MessageParser<Ocrx.Contracts.Proto.TrackResponse> Parser { get; }
@@ -788,6 +807,7 @@ namespace Ocrx.Contracts.Proto
             Tick = 1,
             HelloAck = 2,
             ApplySettings = 3,
+            StreamEnd = 4,
         }
     }
 }

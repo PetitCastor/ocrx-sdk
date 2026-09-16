@@ -44,6 +44,8 @@ sequenceDiagram
         loop every scanned frame
             E-->>P: TickResult
         end
+        E-->>P: StreamEnd
+        P->>E: half-close Track request stream
     else v outside the engine's range
         E-->>P: FAILED_PRECONDITION + trailers<br/>ocrx-protocol-min / ocrx-protocol-max
         Note over P: ProtocolMismatchException — never retried
@@ -157,8 +159,12 @@ backlog — `frame_seq` is monotonic per scanned frame and is the only way to de
 
 Replay adds a start gate: the engine does not consume the corpus until at least one client has sent
 a `RoiSetUpdate`, so a run cannot silently produce nothing. When the corpus is exhausted or the
-engine shuts down, every `Track` stream is **completed normally** — `Ticks` ends, and a plugin runs
-its finalisers. A dropped pipe instead surfaces as `RpcException(Unavailable)`, and the plugin (or,
+engine shuts down, a current engine writes `StreamEnd` after every queued response. A current SDK
+half-closes its request stream on receipt, then `Ticks` ends and a plugin runs its finalisers. This
+ordered acknowledgement prevents the engine from tearing down the named pipe before the client has
+observed the final replay result. The arm is additive: an older plugin skips it and still receives
+the ordinary stream completion; a newer plugin against an older engine continues to use that legacy
+completion path. A dropped pipe instead surfaces as `RpcException(Unavailable)`, and the plugin (or,
 from TASK-07, the plugin host) decides whether to reconnect; the SDK deliberately has no reconnect
 logic of its own, so a tracker's state machine cannot keep running across an engine restart it never
 learned about.

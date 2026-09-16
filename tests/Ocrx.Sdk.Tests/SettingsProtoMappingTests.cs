@@ -85,6 +85,15 @@ public class SettingsProtoMappingTests
     }
 
     [Fact]
+    public void StreamEnd_IsTheFieldFourTrackResponseArm()
+    {
+        var response = new ProtoTrackResponse { StreamEnd = new Ocrx.Contracts.Proto.StreamEnd() };
+
+        Assert.Equal(4, ProtoTrackResponse.StreamEndFieldNumber);
+        Assert.Equal(ProtoTrackResponse.MsgOneofCase.StreamEnd, response.MsgCase);
+    }
+
+    [Fact]
     public void NewEngineWithOldPlugin_HasNoSpecToRender()
     {
         var request = new ProtoTrackRequest { Hello = new Hello { ClientName = "legacy-plugin" } };

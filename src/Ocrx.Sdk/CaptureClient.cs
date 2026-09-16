@@ -318,6 +318,18 @@ public sealed class TrackSession : IAsyncDisposable
                 continue;
             }
 
+            // A normal gRPC completion alone can race the engine process shutting down: the server
+            // handler has returned, but the client has not necessarily observed its trailers before
+            // the named pipe goes away. StreamEnd is the explicit, ordered proof that every earlier
+            // response arrived. Half-close the request side before returning so a compatible engine
+            // can wait for that acknowledgement instead of guessing with a delay. An older engine
+            // never sends this additive oneof arm, so its ordinary stream completion still works.
+            if (response.MsgCase == TrackResponse.MsgOneofCase.StreamEnd)
+            {
+                await CompleteRequestStreamAsync();
+                yield break;
+            }
+
             // Forward compatibility: a future engine may add response kinds, and an older plugin
             // must ignore them rather than treat an unset oneof as an empty tick.
             if (response.MsgCase != TrackResponse.MsgOneofCase.Tick)
@@ -459,31 +471,7 @@ public sealed class TrackSession : IAsyncDisposable
         if (Interlocked.Exchange(ref _disposed, 1) == 1)
             return;
 
-        await _writeGate.WaitAsync();
-        try
-        {
-            if (!_requestStreamClosed)
-            {
-                _requestStreamClosed = true;
-
-                // Half-close so the engine's request pump can finish; if the call is already dead
-                // that is exactly the state we were trying to reach.
-                try { await _call.RequestStream.CompleteAsync(); }
-                catch (RpcException) { }
-                catch (InvalidOperationException) { }
-
-                // And an OCE, which is the same "the call is already dead" in the shape the
-                // channel's ThrowOperationCanceledOnCancellation produces. This path is no longer
-                // rare: TrackAsync disposes the session on every failed handshake, so a cleanup
-                // throwing here would replace the ProtocolMismatchException the caller needed
-                // with an exception about the cleanup.
-                catch (OperationCanceledException) { }
-            }
-        }
-        finally
-        {
-            _writeGate.Release();
-        }
+        await CompleteRequestStreamAsync();
 
         // The gate is deliberately NOT disposed. A tracker thread may be parked in SendAsync's
         // WaitAsync right now — the concurrency this class exists to serialise — and the Release
@@ -492,6 +480,35 @@ public sealed class TrackSession : IAsyncDisposable
         // it means to. A SemaphoreSlim whose AvailableWaitHandle was never touched holds nothing
         // but managed memory, so there is no leak to trade against that.
         _call.Dispose();
+    }
+
+    /// <summary>
+    /// Half-closes the request side once, whether the caller is disposing an abandoned session or
+    /// has received the engine's explicit <c>StreamEnd</c> marker. Serialised with every settings/
+    /// ROI write because gRPC permits only one writer at a time.
+    /// </summary>
+    private async Task CompleteRequestStreamAsync()
+    {
+        await _writeGate.WaitAsync();
+        try
+        {
+            if (_requestStreamClosed)
+                return;
+
+            _requestStreamClosed = true;
+
+            // Half-close so the engine's request pump can finish; if the call is already dead that
+            // is exactly the state we were trying to reach. A received StreamEnd remains an orderly
+            // ending even if the peer has already stopped accepting the acknowledgement.
+            try { await _call.RequestStream.CompleteAsync(); }
+            catch (RpcException) { }
+            catch (InvalidOperationException) { }
+            catch (OperationCanceledException) { }
+        }
+        finally
+        {
+            _writeGate.Release();
+        }
     }
 
     private async Task SendAsync(TrackRequest request, CancellationToken ct = default)

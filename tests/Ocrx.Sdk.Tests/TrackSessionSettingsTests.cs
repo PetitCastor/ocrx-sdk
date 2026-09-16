@@ -7,6 +7,32 @@ namespace Ocrx.Sdk.Tests;
 public class TrackSessionSettingsTests
 {
     [Fact]
+    public async Task StreamEnd_HalfClosesTheRequestStreamAndEndsTicksNormally()
+    {
+        var writer = new RecordingClientStreamWriter<TrackRequest>();
+        var reader = new QueueAsyncStreamReader<TrackResponse>(
+        [
+            new TrackResponse { Tick = new TickResult { TimestampMs = 1_000, FrameSeq = 7 } },
+            new TrackResponse { StreamEnd = new StreamEnd() },
+        ]);
+        using var call = new AsyncDuplexStreamingCall<TrackRequest, TrackResponse>(
+            writer,
+            reader,
+            Task.FromResult(new Metadata()),
+            () => new Status(StatusCode.OK, string.Empty),
+            () => new Metadata(),
+            () => { });
+        await using var session = new TrackSession(call);
+
+        var ticks = new List<TickData>();
+        await foreach (var tick in session.Ticks(CancellationToken.None))
+            ticks.Add(tick);
+
+        Assert.Equal(7ul, Assert.Single(ticks).FrameSeq);
+        Assert.Equal(1, writer.CompleteCalls);
+    }
+
+    [Fact]
     public async Task ApplySettings_IsDispatchedWithoutYieldingATick_AndSettingsSpecUsesTheLiveStream()
     {
         var writer = new RecordingClientStreamWriter<TrackRequest>();
