@@ -74,6 +74,10 @@ namespace Ocrx.Sdk.Testing
         public Ocrx.Sdk.StreamEndReason Reason { get; init; }
         public System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.CaptureRecord> Records { get; init; }
     }
+    public static class SettingsSpecFileAssert
+    {
+        public static void Matches(Ocrx.Sdk.SettingsSpec expected, string path) { }
+    }
     public sealed class TickDataBuilder
     {
         public TickDataBuilder(int frameWidth = 2560, int frameHeight = 1440) { }
