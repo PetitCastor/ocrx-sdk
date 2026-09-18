@@ -318,6 +318,12 @@ namespace Ocrx.Sdk
         public System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.SettingsField> Fields { get; init; }
         public static Ocrx.Sdk.SettingsSpec Empty { get; }
     }
+    public static class SettingsSpecFile
+    {
+        public const string FileName = "settings-spec.json";
+        public static bool TryRead(string path, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Ocrx.Sdk.SettingsSpec? spec) { }
+        public static void Write(Ocrx.Sdk.SettingsSpec spec, string path) { }
+    }
     public sealed class SettingsValue : System.IEquatable<Ocrx.Sdk.SettingsValue>
     {
         public SettingsValue(string Id, string Value) { }

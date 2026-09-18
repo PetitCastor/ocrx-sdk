@@ -40,7 +40,7 @@ public abstract class PluginConfig
     /// </remarks>
     public int ConfigVersion { get; set; }
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    internal static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
