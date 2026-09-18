@@ -27,5 +27,16 @@ public sealed class SettingsSpecFileTests : IDisposable
         Assert.False(SettingsSpecFile.TryRead(path, out _));
     }
 
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{\"fields\":[{\"id\":\"theme\",\"label\":\"Theme\",\"type\":0}]}")]
+    public void TryRead_MissingRequiredSchemaValues_ReturnsFalse(string content)
+    {
+        var path = Path.Combine(_directory, SettingsSpecFile.FileName);
+        File.WriteAllText(path, content);
+
+        Assert.False(SettingsSpecFile.TryRead(path, out _));
+    }
+
     public void Dispose() => Directory.Delete(_directory, recursive: true);
 }
