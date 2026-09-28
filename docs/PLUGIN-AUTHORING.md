@@ -318,6 +318,17 @@ frame-space rect it really read back on the result. A plugin never rescales a re
 reports. This is what keeps a ROI table valid across monitors, and it is a frozen constraint, not a
 convenience ([`ARCHITECTURE.md`](ARCHITECTURE.md#frozen-constraints)).
 
+A frame of another aspect ratio is mapped by the game's **scale mode**, set on its `reference` entry
+in the plugins repository's `games.json`, not by the plugin (`RoiScaleMode`):
+
+| Mode | Scale | Use when the game's HUD… |
+| --- | --- | --- |
+| `fit` (default) | the smaller axis ratio, centered, bars on the spare axis | shrinks to fit a taller screen |
+| `height` | the height ratio, centered horizontally | keeps its size relative to the screen height (Star Citizen) |
+
+The two agree on every frame at least as wide as 16:9, so the mode only matters on 16:10 or 4:3
+frames. Under `height`, a ROI near the left or right edge can fall outside a narrow frame.
+
 A region that cannot touch the frame at all — origin past the frame edge, or zero width/height — is
 rejected as a per-ROI error rather than clamped to a meaningless sliver.
 

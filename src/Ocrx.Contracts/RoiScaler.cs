@@ -9,7 +9,9 @@ namespace Ocrx.Contracts;
 /// the other; see the banner in <see cref="DescribeFrame(int, int)"/>. The two bars are equal when
 /// the leftover pixels are even and differ by one when they are odd — a single leftover pixel has
 /// no symmetric split, and which side keeps it falls out of <see cref="Math.Round(double)"/>'s
-/// to-even rounding of each mapped edge. A
+/// to-even rounding of each mapped edge. A reference whose <see cref="RoiReference.ScaleMode"/> is
+/// <see cref="RoiScaleMode.Height"/> scales by the height ratio instead, which differs only on a
+/// frame taller than the reference. A
 /// game with its own calibration passes an explicit <see cref="RoiReference"/>; every overload
 /// here falls back to <see cref="RoiReference.Default"/> when it isn't given one. Every member
 /// shares one fit computation, <see cref="FitTransform"/>, so a full-rect mapping and a
@@ -39,9 +41,9 @@ public static class RoiScaler
         if (!reference.IsValid)
             throw new ArgumentOutOfRangeException(nameof(reference), "Reference size must be positive.");
 
-        // Uniform scale (the smaller of the two axis ratios) plus centering: the reference is a
-        // canvas fitted inside the frame, with leftover space split into symmetric bars, rather
-        // than each axis stretching independently to fill the frame.
+        // Uniform scale plus centering, never each axis stretching independently to fill the
+        // frame. Under Fit the scale is the smaller axis ratio and leftover space splits into
+        // symmetric bars; under Height it is the height ratio (see RoiScaleMode).
         var fit = FitTransform.For(frameWidth, frameHeight, reference);
 
         // Scale edges rather than width/height so adjacent ROIs stay adjacent after rounding.
@@ -155,7 +157,14 @@ public static class RoiScaler
         var text = $"capture {frameWidth}x{frameHeight}, ROIs scaled x{fit.Scale:0.###}";
 
         if (frameWidth * (long)reference.Height != frameHeight * (long)reference.Width)
-            text += $" — off-aspect: reference fitted and centered ({fit.OffsetX:0.#}px pillarbox, {fit.OffsetY:0.#}px letterbox)";
+        {
+            // Under Height a narrow frame gives a negative OffsetX: the canvas overhangs both sides.
+            text += reference.ScaleMode != RoiScaleMode.Height
+                ? $" — off-aspect: reference fitted and centered ({fit.OffsetX:0.#}px pillarbox, {fit.OffsetY:0.#}px letterbox)"
+                : fit.OffsetX < 0
+                    ? $" — off-aspect: reference scaled to height and centered ({-fit.OffsetX:0.#}px cut off each side)"
+                    : $" — off-aspect: reference scaled to height and centered ({fit.OffsetX:0.#}px pillarbox)";
+        }
         return text;
     }
 }

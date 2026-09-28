@@ -89,6 +89,7 @@ namespace Ocrx.Contracts
         public RoiReference(int Width, int Height) { }
         public int Height { get; init; }
         public bool IsValid { get; }
+        public Ocrx.Contracts.RoiScaleMode ScaleMode { get; init; }
         public int Width { get; init; }
         public static Ocrx.Contracts.RoiReference Default { get; }
     }
@@ -97,6 +98,11 @@ namespace Ocrx.Contracts
         public RoiResultException(string roiId, string message, bool reportedByEngine) { }
         public bool ReportedByEngine { get; }
         public string RoiId { get; }
+    }
+    public enum RoiScaleMode
+    {
+        Fit = 0,
+        Height = 1,
     }
     public static class RoiScaler
     {
