@@ -25,6 +25,7 @@ The first OCRX package train is version `2.0.0`.
 | --- | --- |
 | `RoiRect` | A region in reference space (2560x1440). What a plugin declares. |
 | `RoiScaler` | Maps reference space **to** frame space, one way only. The engine applies it; a plugin never maps a reported rect back. |
+| `RoiReference`, `RoiScaleMode` | A game's reference resolution and how it follows another aspect ratio (`Fit`, or `Height` for a HUD sized to the screen height). |
 | `OcrRegionResult`, `OcrLineInfo`, `OcrWordInfo` | An OCR reading, with per-word geometry for column-shaped UI. |
 | `PixelPatchSampler` | CPU-side BGRA sampling over a small pixel region — colour probes. |
 | `WireLimits` | The budgets a payload must stay inside (max pixel bytes, default/clamped OCR scale). |
