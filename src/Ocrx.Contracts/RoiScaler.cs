@@ -158,9 +158,12 @@ public static class RoiScaler
 
         if (frameWidth * (long)reference.Height != frameHeight * (long)reference.Width)
         {
-            text += reference.ScaleMode == RoiScaleMode.Height
-                ? $" — off-aspect: reference scaled to height and centered ({fit.OffsetX:0.#}px horizontal offset)"
-                : $" — off-aspect: reference fitted and centered ({fit.OffsetX:0.#}px pillarbox, {fit.OffsetY:0.#}px letterbox)";
+            // Under Height a narrow frame gives a negative OffsetX: the canvas overhangs both sides.
+            text += reference.ScaleMode != RoiScaleMode.Height
+                ? $" — off-aspect: reference fitted and centered ({fit.OffsetX:0.#}px pillarbox, {fit.OffsetY:0.#}px letterbox)"
+                : fit.OffsetX < 0
+                    ? $" — off-aspect: reference scaled to height and centered ({-fit.OffsetX:0.#}px cut off each side)"
+                    : $" — off-aspect: reference scaled to height and centered ({fit.OffsetX:0.#}px pillarbox)";
         }
         return text;
     }

@@ -101,6 +101,8 @@ public class RoiScalerHeightModeTests
         var text = RoiScaler.DescribeFrame(1600, 1200, Height);
 
         Assert.Contains("scaled to height", text);
+        Assert.Contains("cut off each side", text);
         Assert.DoesNotContain("letterbox", text);
+        Assert.DoesNotContain("-", text.Split('(')[^1]);
     }
 }
