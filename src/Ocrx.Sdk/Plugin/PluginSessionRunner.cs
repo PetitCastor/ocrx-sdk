@@ -69,6 +69,16 @@ internal sealed class PluginSessionRunner
                         session.PublishSettingsAsync(spec, publishCt);
                     _services.UpdateRoisHandler = (updated, updateCt) =>
                         session.UpdateRoisAsync(updated, updateCt);
+
+                    // A plugin thread that moved its set after the snapshot above but before the
+                    // handler was installed wrote to the previous (disposed) session, and that write
+                    // was swallowed. Resend so the engine never keeps a set the plugin has left.
+                    var current = _plugin.Rois;
+                    if (!ReferenceEquals(current, rois))
+                    {
+                        rois = current;
+                        await session.UpdateRoisAsync(rois, ct);
+                    }
                     _services.Engine = engine.WithSession(session);
                     _dispatcher.OnConnected();
                     reconnectAttempt = 0;

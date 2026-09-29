@@ -78,10 +78,14 @@ public interface IPluginServices
     /// </summary>
     /// <remarks>
     /// The host reads <see cref="IOcrxPlugin.Rois"/> afresh on every connect, so a plugin that calls
-    /// this must also make <see cref="IOcrxPlugin.Rois"/> return the same new set, or a reconnect
-    /// resubscribes the old one. Best-effort like <see cref="PublishSettingsAsync"/>: with no live
-    /// session the call is a no-op, because the next connect sends <see cref="IOcrxPlugin.Rois"/>.
-    /// A default no-op keeps older plugin test doubles compiling.
+    /// this must FIRST make <see cref="IOcrxPlugin.Rois"/> return the new set — swap in a fresh
+    /// immutable list, since the host reads it from its own loop — or a reconnect resubscribes the
+    /// old one. Keep the ids stable: only rects and scales should move, because a tick already in
+    /// flight is matched against the current set by id. Concurrent calls are serialised on the wire
+    /// in no particular order, so a plugin that can race itself should make its own calls sequential.
+    /// Best-effort like <see cref="PublishSettingsAsync"/>: with no live session the call is a no-op,
+    /// because the next connect sends <see cref="IOcrxPlugin.Rois"/>. A default no-op keeps older
+    /// plugin test doubles compiling.
     /// </remarks>
     Task UpdateRoisAsync(IReadOnlyList<RoiSubscription> rois, CancellationToken ct = default) => Task.CompletedTask;
 

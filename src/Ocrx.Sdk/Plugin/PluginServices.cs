@@ -99,8 +99,7 @@ internal sealed class PluginServices : IPluginServices
         {
             await publish(spec, ct);
         }
-        catch (Exception ex) when (ex is ObjectDisposedException or RpcException
-            or OperationCanceledException && !ct.IsCancellationRequested)
+        catch (Exception ex) when (IsSessionGone(ex, ct))
         {
             // The session ended between the check and the write. Not a failure the plugin can act
             // on: the engine gets a fresh spec when the plugin re-publishes on the next connect.
@@ -119,14 +118,24 @@ internal sealed class PluginServices : IPluginServices
         {
             await update(rois, ct);
         }
-        catch (Exception ex) when (ex is ObjectDisposedException or RpcException
-            or OperationCanceledException && !ct.IsCancellationRequested)
+        catch (Exception ex) when (IsSessionGone(ex, ct))
         {
-            // Same race as a settings publish: the session ended under the write. The next connect
-            // subscribes whatever IOcrxPlugin.Rois returns by then, so nothing is lost.
+            // Same race as a settings publish: the session ended under the write. The runner reads
+            // IOcrxPlugin.Rois again once the next session's writer is installed, so nothing is lost.
             LogVerbose($"ROI update skipped — no live session: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// Whether a request-stream write failed only because its session is over. Spelled with
+    /// <c>||</c> on purpose: in <c>ex is A or B or C &amp;&amp; x</c> the <c>&amp;&amp;</c> binds to the whole
+    /// <c>is</c> test, so a caller that had already cancelled would see a dead session's
+    /// <see cref="ObjectDisposedException"/> leak. <see cref="InvalidOperationException"/> is
+    /// gRPC's "the call is complete" when the engine dropped the call without a StreamEnd.
+    /// </summary>
+    private static bool IsSessionGone(Exception ex, CancellationToken ct)
+        => ex is ObjectDisposedException or RpcException or InvalidOperationException
+           || ex is OperationCanceledException && !ct.IsCancellationRequested;
 
     public Task RebuildOutputsAsync(PluginConfig config, CancellationToken ct = default)
     {

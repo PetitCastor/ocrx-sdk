@@ -59,6 +59,36 @@ public class PluginServicesRoiUpdateTests
         Assert.Contains(output.Lines, line => line.StartsWith("ROI update skipped", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// A dead session stays a quiet no-op even when the caller had already cancelled: the old filter
+    /// bound its cancellation test to the whole <c>is</c> pattern and let this leak.
+    /// </summary>
+    [Fact]
+    public async Task ASessionThatEndedUnderTheWrite_IsSwallowedEvenWhenTheCallerCancelled()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+        var services = new PluginServices([], new RecordingOutput(), verbose: false, dumpFrame: null)
+        {
+            UpdateRoisHandler = (_, _) => throw new ObjectDisposedException("TrackSession"),
+        };
+
+        await services.UpdateRoisAsync([Moved], cts.Token);
+    }
+
+    /// <summary>gRPC's "the call is complete", raised when the engine dropped the call without a
+    /// StreamEnd — the same dead session under another name.</summary>
+    [Fact]
+    public async Task ACallThatCompletedUnderTheWrite_IsSwallowed()
+    {
+        var services = new PluginServices([], new RecordingOutput(), verbose: false, dumpFrame: null)
+        {
+            UpdateRoisHandler = (_, _) => throw new InvalidOperationException("call is complete"),
+        };
+
+        await services.UpdateRoisAsync([Moved]);
+    }
+
     [Fact]
     public async Task CancellationByTheCaller_Propagates()
     {

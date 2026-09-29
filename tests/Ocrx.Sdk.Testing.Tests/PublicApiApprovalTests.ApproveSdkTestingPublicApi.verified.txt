@@ -18,6 +18,7 @@ namespace Ocrx.Sdk.Testing
         public System.Collections.Generic.List<Ocrx.Sdk.SettingsSpec> Published { get; }
         public System.Func<Ocrx.Sdk.RoiSubscription, System.Threading.CancellationToken, System.Threading.Tasks.Task<Ocrx.Contracts.OcrRegionResult?>>? ReadRoiHandler { get; set; }
         public System.Collections.Generic.List<Ocrx.Sdk.PluginConfig> Rebuilt { get; }
+        public System.Collections.Generic.List<System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.RoiSubscription>> UpdatedRois { get; }
         public System.Collections.Generic.IReadOnlyList<string> VerboseLogs { get; }
         public System.Threading.Tasks.Task<string?> DumpFrameAsync(Ocrx.Contracts.RoiRect? roi, string prefix, System.Threading.CancellationToken ct) { }
         public void Emit(Ocrx.Sdk.CaptureRecord record) { }
@@ -27,6 +28,7 @@ namespace Ocrx.Sdk.Testing
         public System.Threading.Tasks.Task PublishSettingsAsync(Ocrx.Sdk.SettingsSpec spec, System.Threading.CancellationToken ct = default) { }
         public System.Threading.Tasks.Task<Ocrx.Contracts.OcrRegionResult?> ReadRoiAsync(Ocrx.Sdk.RoiSubscription roi, System.Threading.CancellationToken ct) { }
         public System.Threading.Tasks.Task RebuildOutputsAsync(Ocrx.Sdk.PluginConfig config, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.Task UpdateRoisAsync(System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.RoiSubscription> rois, System.Threading.CancellationToken ct = default) { }
     }
     public sealed class FakeRecordSink : Ocrx.Sdk.IRecordSink, System.IAsyncDisposable
     {
