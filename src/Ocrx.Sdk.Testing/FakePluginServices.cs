@@ -28,6 +28,10 @@ public sealed class FakePluginServices : IPluginServices
     /// <see cref="RebuildOutputsAsync"/>, in order.</summary>
     public List<PluginConfig> Rebuilt { get; } = [];
 
+    /// <summary>Every ROI set a plugin under test pushed through <see cref="UpdateRoisAsync"/>, in
+    /// order — for asserting it moved its regions.</summary>
+    public List<IReadOnlyList<RoiSubscription>> UpdatedRois { get; } = [];
+
     /// <summary>Every line written through <see cref="Log"/>.</summary>
     public IReadOnlyList<string> Logs => _logs;
 
@@ -82,6 +86,12 @@ public sealed class FakePluginServices : IPluginServices
     public Task RebuildOutputsAsync(PluginConfig config, CancellationToken ct = default)
     {
         Rebuilt.Add(config);
+        return Task.CompletedTask;
+    }
+
+    public Task UpdateRoisAsync(IReadOnlyList<RoiSubscription> rois, CancellationToken ct = default)
+    {
+        UpdatedRois.Add(rois);
         return Task.CompletedTask;
     }
 

@@ -74,6 +74,14 @@ internal sealed class PluginServices : IPluginServices
     internal Func<SettingsSpec, CancellationToken, Task>? PublishSettingsHandler { get; set; }
 
     /// <summary>
+    /// The current session's ROI writer, installed alongside <see cref="PublishSettingsHandler"/>
+    /// and for the same reason; always the live
+    /// <see cref="TrackSession.UpdateRoisAsync(IReadOnlyList{RoiSubscription}, CancellationToken)"/>
+    /// in production.
+    /// </summary>
+    internal Func<IReadOnlyList<RoiSubscription>, CancellationToken, Task>? UpdateRoisHandler { get; set; }
+
+    /// <summary>
     /// Recomposes and swaps the run's output sinks from a config. Supplied by the host, which owns
     /// the pipeline and the options a rebuild must honour; null in a test double that never
     /// exercises a live rebuild.
@@ -91,14 +99,43 @@ internal sealed class PluginServices : IPluginServices
         {
             await publish(spec, ct);
         }
-        catch (Exception ex) when (ex is ObjectDisposedException or RpcException
-            or OperationCanceledException && !ct.IsCancellationRequested)
+        catch (Exception ex) when (IsSessionGone(ex, ct))
         {
             // The session ended between the check and the write. Not a failure the plugin can act
             // on: the engine gets a fresh spec when the plugin re-publishes on the next connect.
             LogVerbose($"settings publish skipped — no live session: {ex.Message}");
         }
     }
+
+    public async Task UpdateRoisAsync(IReadOnlyList<RoiSubscription> rois, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(rois);
+
+        if (UpdateRoisHandler is not { } update)
+            return;
+
+        try
+        {
+            await update(rois, ct);
+        }
+        catch (Exception ex) when (IsSessionGone(ex, ct))
+        {
+            // Same race as a settings publish: the session ended under the write. The runner reads
+            // IOcrxPlugin.Rois again once the next session's writer is installed, so nothing is lost.
+            LogVerbose($"ROI update skipped — no live session: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Whether a request-stream write failed only because its session is over. Spelled with
+    /// <c>||</c> on purpose: in <c>ex is A or B or C &amp;&amp; x</c> the <c>&amp;&amp;</c> binds to the whole
+    /// <c>is</c> test, so a caller that had already cancelled would see a dead session's
+    /// <see cref="ObjectDisposedException"/> leak. <see cref="InvalidOperationException"/> is
+    /// gRPC's "the call is complete" when the engine dropped the call without a StreamEnd.
+    /// </summary>
+    private static bool IsSessionGone(Exception ex, CancellationToken ct)
+        => ex is ObjectDisposedException or RpcException or InvalidOperationException
+           || ex is OperationCanceledException && !ct.IsCancellationRequested;
 
     public Task RebuildOutputsAsync(PluginConfig config, CancellationToken ct = default)
     {

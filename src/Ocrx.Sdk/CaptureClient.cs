@@ -359,13 +359,22 @@ public sealed class TrackSession : IAsyncDisposable
     }
 
     /// <summary>Full-replacement update of the subscribed set.</summary>
-    public async Task UpdateRoisAsync(IReadOnlyList<RoiSubscription> rois)
+    public Task UpdateRoisAsync(IReadOnlyList<RoiSubscription> rois)
+        => UpdateRoisAsync(rois, CancellationToken.None);
+
+    /// <summary>
+    /// Full-replacement update of the subscribed set, observing <paramref name="ct"/> before it
+    /// acquires the request-stream writer. The tokenless overload remains for binary compatibility.
+    /// </summary>
+    public Task UpdateRoisAsync(IReadOnlyList<RoiSubscription> rois, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(rois);
+
         var update = new RoiSetUpdate();
         foreach (var roi in rois)
             update.Rois.Add(roi.ToProto());
 
-        await SendAsync(new TrackRequest { Rois = update });
+        return SendAsync(new TrackRequest { Rois = update }, ct);
     }
 
     internal Task SendHelloAsync(string clientName, uint protocolVersion)

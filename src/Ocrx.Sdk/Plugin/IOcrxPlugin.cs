@@ -21,9 +21,10 @@ public interface IOcrxPlugin
     string Name { get; }
 
     /// <summary>
-    /// The regions to subscribe, in reference space. Read once per connect and sent as the initial
+    /// The regions to subscribe, in reference space. Read on every connect and sent as the initial
     /// subscription, so it must be complete before the first tick — per-tick atomicity means there
-    /// is no mid-tick round-trip to add a region.
+    /// is no mid-tick round-trip to add a region. A plugin whose regions move at runtime returns the
+    /// current set here and pushes each change through <see cref="IPluginServices.UpdateRoisAsync"/>.
     /// </summary>
     IReadOnlyList<RoiSubscription> Rois { get; }
 

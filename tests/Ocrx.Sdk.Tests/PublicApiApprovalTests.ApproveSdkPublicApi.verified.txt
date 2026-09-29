@@ -116,6 +116,7 @@ namespace Ocrx.Sdk
         System.Threading.Tasks.Task PublishSettingsAsync(Ocrx.Sdk.SettingsSpec spec, System.Threading.CancellationToken ct = default);
         System.Threading.Tasks.Task<Ocrx.Contracts.OcrRegionResult?> ReadRoiAsync(Ocrx.Sdk.RoiSubscription roi, System.Threading.CancellationToken ct);
         System.Threading.Tasks.Task RebuildOutputsAsync(Ocrx.Sdk.PluginConfig config, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.Task UpdateRoisAsync(System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.RoiSubscription> rois, System.Threading.CancellationToken ct = default);
     }
     public interface IRecordSink : System.IAsyncDisposable
     {
@@ -387,6 +388,7 @@ namespace Ocrx.Sdk
         public System.Threading.Tasks.Task PublishSettingsAsync(Ocrx.Sdk.SettingsSpec spec, System.Threading.CancellationToken ct) { }
         public System.Collections.Generic.IAsyncEnumerable<Ocrx.Sdk.TickData> Ticks([System.Runtime.CompilerServices.EnumeratorCancellation] System.Threading.CancellationToken ct) { }
         public System.Threading.Tasks.Task UpdateRoisAsync(System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.RoiSubscription> rois) { }
+        public System.Threading.Tasks.Task UpdateRoisAsync(System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.RoiSubscription> rois, System.Threading.CancellationToken ct) { }
     }
     public enum TriggerKind
     {

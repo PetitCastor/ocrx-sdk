@@ -192,7 +192,7 @@ Members, and what each one is for:
 | Member | Required | Notes |
 | --- | --- | --- |
 | `Name` | yes | Client name on the Track stream (what the engine lists in `GetStatus`, and what a user sees when two plugins share an engine) *and* the `CaptureRecord.Plugin` tag on everything emitted. |
-| `Rois` | yes | Complete before the first tick; see [§4](#4-rois-space-scale-calibration). |
+| `Rois` | yes | Read on every connect and complete before the first tick; see [§4](#4-rois-space-scale-calibration). Move it mid-run with `UpdateRoisAsync`. |
 | `OnTickAsync` | yes | One scanned frame. Called sequentially — the host never overlaps two ticks — so plugin state needs no locking. Throwing does **not** end the run: the host logs it and delivers the next tick, because one unparseable frame out of thousands is normal. |
 | `ErrorPolicy` | no (`AbortTick`) | See [§5](#5-error-handling). |
 | `OnManualTickAsync` | no (→ `OnTickAsync`) | The tick on which the engine hotkey fired. Override when the hotkey means something other than "the normal capture, forced". |
@@ -206,6 +206,11 @@ What the plugin gets back, through `ctx.Services` (`IPluginServices`):
 - `Log` / `LogVerbose` — user-visible lines; `LogVerbose` is a no-op unless the run was started with
   `--verbose`, so it is safe to call on every tick.
 - `DumpFrameAsync(roi, prefix, ct)` / `ReadRoiAsync(roi, ct)` — calibration aids, [§4](#4-rois-space-scale-calibration).
+- `UpdateRoisAsync(rois, ct)` — replaces the whole ROI set on the live session, for regions that
+  move at runtime (a game setting that zooms the HUD). Swap `Rois` to the new immutable set *before*
+  calling it: the host reads `Rois` again on every connect, so a stale `Rois` makes a reconnect
+  resubscribe the old set. Keep the ids stable and move only rects and scales. A tick already in
+  flight still carries the old rects; the engine applies the new set from its next scan.
 - `Engine` — an `EngineInfo`: version, negotiated protocol, frame size, OCR language, connected
   clients, `ScanInterval`, and `ReplayMode`. **A plugin that writes anywhere persistent must branch
   on `ReplayMode`** — a corpus run must not append to a real ledger.
