@@ -74,6 +74,14 @@ internal sealed class PluginServices : IPluginServices
     internal Func<SettingsSpec, CancellationToken, Task>? PublishSettingsHandler { get; set; }
 
     /// <summary>
+    /// The current session's ROI writer, installed alongside <see cref="PublishSettingsHandler"/>
+    /// and for the same reason; always the live
+    /// <see cref="TrackSession.UpdateRoisAsync(IReadOnlyList{RoiSubscription}, CancellationToken)"/>
+    /// in production.
+    /// </summary>
+    internal Func<IReadOnlyList<RoiSubscription>, CancellationToken, Task>? UpdateRoisHandler { get; set; }
+
+    /// <summary>
     /// Recomposes and swaps the run's output sinks from a config. Supplied by the host, which owns
     /// the pipeline and the options a rebuild must honour; null in a test double that never
     /// exercises a live rebuild.
@@ -97,6 +105,26 @@ internal sealed class PluginServices : IPluginServices
             // The session ended between the check and the write. Not a failure the plugin can act
             // on: the engine gets a fresh spec when the plugin re-publishes on the next connect.
             LogVerbose($"settings publish skipped — no live session: {ex.Message}");
+        }
+    }
+
+    public async Task UpdateRoisAsync(IReadOnlyList<RoiSubscription> rois, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(rois);
+
+        if (UpdateRoisHandler is not { } update)
+            return;
+
+        try
+        {
+            await update(rois, ct);
+        }
+        catch (Exception ex) when (ex is ObjectDisposedException or RpcException
+            or OperationCanceledException && !ct.IsCancellationRequested)
+        {
+            // Same race as a settings publish: the session ended under the write. The next connect
+            // subscribes whatever IOcrxPlugin.Rois returns by then, so nothing is lost.
+            LogVerbose($"ROI update skipped — no live session: {ex.Message}");
         }
     }
 

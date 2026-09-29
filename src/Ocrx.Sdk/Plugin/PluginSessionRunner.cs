@@ -15,7 +15,6 @@ internal sealed class PluginSessionRunner
     private readonly PluginHostOptions _options;
     private readonly IOcrxPlugin _plugin;
     private readonly string _pipeName;
-    private readonly IReadOnlyList<RoiSubscription> _rois;
 
     public PluginSessionRunner(IOcrxPlugin plugin, CaptureClient client,
         PluginServices services, IPluginOutput output, PluginHostOptions options, string pipeName)
@@ -26,7 +25,6 @@ internal sealed class PluginSessionRunner
         _output = output;
         _options = options;
         _pipeName = pipeName;
-        _rois = plugin.Rois;
         _dispatcher = new TickDispatcher(plugin, services, output);
     }
 
@@ -58,7 +56,10 @@ internal sealed class PluginSessionRunner
                     announcedWait = false;
                     replayMode = engine.ReplayMode;
 
-                    await using var session = await _client.TrackAsync(_plugin.Name, _rois, ct);
+                    // Read per connect, not once: a plugin that moved its regions mid-run through
+                    // IPluginServices.UpdateRoisAsync must resubscribe the moved set after a reconnect.
+                    var rois = _plugin.Rois;
+                    await using var session = await _client.TrackAsync(_plugin.Name, rois, ct);
 
                     // Route engine edits before consuming ticks, then install the live request-stream
                     // writer before invoking the awaited connection hook. A settings-capable plugin
@@ -66,13 +67,15 @@ internal sealed class PluginSessionRunner
                     session.ApplySettingsHandler = _dispatcher.ApplySettingsAsync;
                     _services.PublishSettingsHandler = (spec, publishCt) =>
                         session.PublishSettingsAsync(spec, publishCt);
+                    _services.UpdateRoisHandler = (updated, updateCt) =>
+                        session.UpdateRoisAsync(updated, updateCt);
                     _services.Engine = engine.WithSession(session);
                     _dispatcher.OnConnected();
                     reconnectAttempt = 0;
                     _plugin.OnSessionEvent(new SessionEvent.Connected(_services.Engine));
                     await _dispatcher.OnConnectedAsync(ct);
 
-                    WriteConnectedBanner(_services.Engine);
+                    WriteConnectedBanner(_services.Engine, rois);
 
                     await foreach (var tick in session.Ticks(ct))
                         await _dispatcher.DispatchAsync(tick, ct);
@@ -149,7 +152,7 @@ internal sealed class PluginSessionRunner
         }
     }
 
-    private void WriteConnectedBanner(EngineInfo engine)
+    private void WriteConnectedBanner(EngineInfo engine, IReadOnlyList<RoiSubscription> rois)
     {
         _output.WriteLine(
             $"Engine:    {engine.EngineVersion}{(engine.ReplayMode ? " (replay)" : "")}");
@@ -157,7 +160,7 @@ internal sealed class PluginSessionRunner
             ? "no frame scanned yet"
             : $"{engine.FrameWidth}x{engine.FrameHeight}")}");
         _output.WriteLine($"Cadence:   {engine.ScanInterval.TotalMilliseconds:0} ms per scan");
-        _output.WriteLine($"ROIs:      {string.Join(", ", _rois.Select(r => r.Id))}");
+        _output.WriteLine($"ROIs:      {string.Join(", ", rois.Select(r => r.Id))}");
         _output.WriteLine();
         _output.WriteLine("Running. Ctrl+C to quit.");
         _output.WriteLine();
