@@ -10,9 +10,9 @@ internal static class OverlayPlacement
     /// </summary>
     /// <remarks>
     /// On an axis pinned to a screen edge the offset is a margin from that edge: a positive value
-    /// always moves the box inward, so one <c>offsetY</c> works for both top and bottom anchors.
-    /// Adding it unconditionally pushed bottom-anchored boxes off the screen by the offset. On a
-    /// centred axis, and for <see cref="OverlayAnchor.Custom"/>, the offset stays additive.
+    /// always moves the box inward, so one <c>offsetY</c> keeps a bottom-anchored box on screen as
+    /// well as a top-anchored one. On a centred axis, and for <see cref="OverlayAnchor.Custom"/>,
+    /// the offset is additive.
     /// </remarks>
     public static (int X, int Y) Resolve(
         OverlayAnchor anchor, int screenWidth, int screenHeight,

@@ -281,8 +281,9 @@ bottom-left, `8` bottom-centre, `9` bottom-right) when positioning must be expli
 are resolution-relative to the primary screen. On an axis pinned to a screen edge, `offsetX`/`offsetY`
 are a margin from that edge — a positive value always moves the overlay inward, so the same
 `offsetY` keeps a bottom anchor as far from the bottom as a top anchor sits from the top. On a centred
-axis, and for custom `x`/`y`, they are added as-is. It is a topmost, click-through, no-activate Windows window: it never inspects the game process and never
-requires elevation. A `Cleared` record hides it; `lingerMs: 0` disables auto-hide.
+axis, and for custom `x`/`y`, they are added as-is.
+It is a topmost, click-through, no-activate Windows window: it never inspects the game process and
+never requires elevation. A `Cleared` record hides it; `lingerMs: 0` disables auto-hide.
 
 Set `fontFile` to a plugin-packaged `.ttf` or `.otf` when the text must not depend on a machine-installed
 font. `usePixelText` switches to one-bit pixel rendering. An optional `borderColor` plus positive
