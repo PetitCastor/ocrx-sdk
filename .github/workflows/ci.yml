@@ -5,7 +5,6 @@ on:
     branches: [master]
   # release.yml calls this workflow so the same gates run on the commit it publishes.
   workflow_call:
-  workflow_dispatch: # TEMP-DISPATCH-PROBE
 
 permissions:
   contents: read
