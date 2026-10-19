@@ -6,20 +6,26 @@ internal static class OverlayPlacement
     /// <summary>
     /// Resolve the top-left corner (in physical pixels) of a <paramref name="width"/> x
     /// <paramref name="height"/> box anchored on a <paramref name="screenWidth"/> x
-    /// <paramref name="screenHeight"/> screen, then apply the additive offset.
+    /// <paramref name="screenHeight"/> screen, then apply the offset.
     /// </summary>
+    /// <remarks>
+    /// On an axis pinned to a screen edge the offset is a margin from that edge: a positive value
+    /// always moves the box inward, so one <c>offsetY</c> works for both top and bottom anchors.
+    /// Adding it unconditionally pushed bottom-anchored boxes off the screen by the offset. On a
+    /// centred axis, and for <see cref="OverlayAnchor.Custom"/>, the offset stays additive.
+    /// </remarks>
     public static (int X, int Y) Resolve(
         OverlayAnchor anchor, int screenWidth, int screenHeight,
         int width, int height, int offsetX, int offsetY, int customX, int customY)
     {
-        var left = 0;
-        var center = (screenWidth - width) / 2;
-        var right = screenWidth - width;
-        var top = 0;
-        var middle = (screenHeight - height) / 2;
-        var bottom = screenHeight - height;
+        var left = offsetX;
+        var center = ((screenWidth - width) / 2) + offsetX;
+        var right = screenWidth - width - offsetX;
+        var top = offsetY;
+        var middle = ((screenHeight - height) / 2) + offsetY;
+        var bottom = screenHeight - height - offsetY;
 
-        var (x, y) = anchor switch
+        return anchor switch
         {
             OverlayAnchor.TopLeft => (left, top),
             OverlayAnchor.TopCenter => (center, top),
@@ -30,10 +36,8 @@ internal static class OverlayPlacement
             OverlayAnchor.BottomLeft => (left, bottom),
             OverlayAnchor.BottomCenter => (center, bottom),
             OverlayAnchor.BottomRight => (right, bottom),
-            OverlayAnchor.Custom => (customX, customY),
-            _ => (customX, customY),
+            OverlayAnchor.Custom => (customX + offsetX, customY + offsetY),
+            _ => (customX + offsetX, customY + offsetY),
         };
-
-        return (x + offsetX, y + offsetY);
     }
 }

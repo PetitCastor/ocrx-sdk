@@ -278,8 +278,10 @@ Its `overlay` keys include `offsetX`/`offsetY`, `width`/`height`, colours, `temp
 use numeric `anchor` (`0` for the default top-centre, `1` for custom `x`/`y`, or `2`-`9` for the
 9-cell grid — `2` top-left, `3` top-right, `4` middle-left, `5` centre, `6` middle-right, `7`
 bottom-left, `8` bottom-centre, `9` bottom-right) when positioning must be explicit. The grid anchors
-are resolution-relative to the primary screen, and `offsetX`/`offsetY` still apply on top of them. It
-is a topmost, click-through, no-activate Windows window: it never inspects the game process and never
+are resolution-relative to the primary screen. On an axis pinned to a screen edge, `offsetX`/`offsetY`
+are a margin from that edge — a positive value always moves the overlay inward, so the same
+`offsetY` keeps a bottom anchor as far from the bottom as a top anchor sits from the top. On a centred
+axis, and for custom `x`/`y`, they are added as-is. It is a topmost, click-through, no-activate Windows window: it never inspects the game process and never
 requires elevation. A `Cleared` record hides it; `lingerMs: 0` disables auto-hide.
 
 Set `fontFile` to a plugin-packaged `.ttf` or `.otf` when the text must not depend on a machine-installed

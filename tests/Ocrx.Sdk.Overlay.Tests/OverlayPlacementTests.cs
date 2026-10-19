@@ -29,11 +29,11 @@ public class OverlayPlacementTests
     }
 
     [Fact]
-    public void TopRight_AnchorsAtTheTopRightCornerPlusOffset()
+    public void TopRight_InsetsFromTheTopRightCornerByOffset()
     {
         var (x, y) = Resolve(OverlayAnchor.TopRight);
 
-        Assert.Equal((2010, 36), (x, y));
+        Assert.Equal((1990, 36), (x, y));
     }
 
     [Fact]
@@ -53,35 +53,35 @@ public class OverlayPlacementTests
     }
 
     [Fact]
-    public void MiddleRight_AnchorsAtTheRightMidpointPlusOffset()
+    public void MiddleRight_InsetsFromTheRightEdgeByOffsetX()
     {
         var (x, y) = Resolve(OverlayAnchor.MiddleRight);
 
-        Assert.Equal((2010, 712), (x, y));
+        Assert.Equal((1990, 712), (x, y));
     }
 
     [Fact]
-    public void BottomLeft_AnchorsAtTheBottomLeftCornerPlusOffset()
+    public void BottomLeft_InsetsFromTheBottomLeftCornerByOffset()
     {
         var (x, y) = Resolve(OverlayAnchor.BottomLeft);
 
-        Assert.Equal((10, 1388), (x, y));
+        Assert.Equal((10, 1316), (x, y));
     }
 
     [Fact]
-    public void BottomCenter_AnchorsAtTheBottomMidpointPlusOffset()
+    public void BottomCenter_InsetsFromTheBottomEdgeByOffsetY()
     {
         var (x, y) = Resolve(OverlayAnchor.BottomCenter);
 
-        Assert.Equal((1010, 1388), (x, y));
+        Assert.Equal((1010, 1316), (x, y));
     }
 
     [Fact]
-    public void BottomRight_AnchorsAtTheBottomRightCornerPlusOffset()
+    public void BottomRight_InsetsFromTheBottomRightCornerByOffset()
     {
         var (x, y) = Resolve(OverlayAnchor.BottomRight);
 
-        Assert.Equal((2010, 1388), (x, y));
+        Assert.Equal((1990, 1316), (x, y));
     }
 
     [Fact]
@@ -100,6 +100,43 @@ public class OverlayPlacementTests
         var (x, y) = Resolve(OverlayAnchor.TopCenter);
 
         Assert.Equal(((ScreenWidth - Width) / 2 + OffsetX, 0 + OffsetY), (x, y));
+    }
+
+    [Theory]
+    [InlineData(OverlayAnchor.TopLeft)]
+    [InlineData(OverlayAnchor.TopCenter)]
+    [InlineData(OverlayAnchor.TopRight)]
+    [InlineData(OverlayAnchor.MiddleLeft)]
+    [InlineData(OverlayAnchor.Center)]
+    [InlineData(OverlayAnchor.MiddleRight)]
+    [InlineData(OverlayAnchor.BottomLeft)]
+    [InlineData(OverlayAnchor.BottomCenter)]
+    [InlineData(OverlayAnchor.BottomRight)]
+    public void GridAnchors_KeepTheWholeBoxOnScreenWithAPositiveOffset(OverlayAnchor anchor)
+    {
+        var (x, y) = Resolve(anchor);
+
+        Assert.InRange(x, 0, ScreenWidth - Width);
+        Assert.InRange(y, 0, ScreenHeight - Height);
+    }
+
+    [Fact]
+    public void BottomAnchor_KeepsTheSameMarginFromTheBottomAsTopKeepsFromTheTop()
+    {
+        var (_, top) = Resolve(OverlayAnchor.TopCenter);
+        var (_, bottom) = Resolve(OverlayAnchor.BottomCenter);
+
+        Assert.Equal(top, ScreenHeight - (bottom + Height));
+    }
+
+    [Fact]
+    public void NegativeOffset_MovesAnEdgeAnchoredBoxOutward()
+    {
+        var (x, y) = OverlayPlacement.Resolve(
+            OverlayAnchor.BottomRight, ScreenWidth, ScreenHeight, Width, Height,
+            offsetX: -10, offsetY: -36, customX: 0, customY: 0);
+
+        Assert.Equal((2010, 1388), (x, y));
     }
 
     private static (int X, int Y) Resolve(OverlayAnchor anchor)
