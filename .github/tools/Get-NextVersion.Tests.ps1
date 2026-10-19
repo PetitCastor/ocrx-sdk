@@ -32,6 +32,7 @@ Assert-Version 'versions compare numerically, not as text' '2.10.1' @{ Bump = 'p
 
 # --- which tags count --------------------------------------------------------------------------
 Assert-Version 'prerelease tags are not a base' '2.8.1' @{ Bump = 'patch'; Tag = $tags + 'v2.9.0-rc.1' }
+Assert-Version 'an upper-case V tag is not a version tag' '2.8.1' @{ Bump = 'patch'; Tag = $tags + 'V9.0.0' }
 Assert-Version 'non-version tags are ignored' '2.8.1' @{ Bump = 'patch'; Tag = $tags + @('latest', 'release-2.9.0', 'v2.9') }
 Assert-Throws 'no stable tag cannot bump' 'nothing to bump from' @{ Bump = 'patch'; Tag = @('v2.0.0-rc.1') }
 Assert-Throws 'no tag at all cannot bump' 'nothing to bump from' @{ Bump = 'minor'; Tag = @() }

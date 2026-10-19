@@ -42,7 +42,7 @@ function ConvertTo-StableVersion {
 
 $latest = $null
 foreach ($name in $Tag) {
-    if ($name -notmatch '^v(.+)$') { continue }
+    if ($name -cnotmatch '^v(.+)$') { continue }
     $candidate = ConvertTo-StableVersion $Matches[1]
     if ($null -ne $candidate -and ($null -eq $latest -or $candidate -gt $latest)) { $latest = $candidate }
 }
@@ -63,7 +63,5 @@ else {
         default { $next = [version]::new($latest.Major, $latest.Minor, $latest.Build + 1) }
     }
 }
-
-if ($Tag -contains "v$next") { throw "Tag v$next already exists." }
 
 $next.ToString()

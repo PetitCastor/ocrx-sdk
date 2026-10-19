@@ -39,8 +39,9 @@ by the protocol integer rather than by matching artifact versions.
    - `version_override` is optional and replaces the bump. It must be strict `X.Y.Z` (no `v`, no
      suffix) and strictly above the latest stable tag.
    - The run first checks that it is on the current `master` tip, then runs the whole `ci.yml` suite
-     (tests, slopwatch, proto lint and compatibility, template cold start, overlay portability) on
-     that exact commit. Only if all of it passes does the `nuget-release` environment ask for
+     (tests, slopwatch, proto lint, template cold start, overlay portability, identity guard, release
+     tooling) on that exact commit. Proto compatibility against `master` is a pull-request check
+     only, since a release run is master itself. Only if all of it passes does the `nuget-release` environment ask for
      approval and the packages publish, followed by the tag and the GitHub release.
 2. Build the private engine against the released `Ocrx.Contracts` package and publish the Windows
    binaries and Velopack feed through `ocrx-releases`.
