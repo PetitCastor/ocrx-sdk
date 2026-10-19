@@ -3,11 +3,22 @@ name: CI
 on:
   pull_request:
     branches: [master]
+  # release.yml calls this workflow so the same gates run on the commit it publishes.
+  workflow_call:
 
 permissions:
   contents: read
 
 jobs:
+  release-tools:
+    name: Release tooling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test the release version script
+        shell: pwsh
+        run: ./.github/tools/Get-NextVersion.Tests.ps1
+
   build-test:
     name: Build and test
     runs-on: windows-latest
@@ -85,8 +96,12 @@ jobs:
         id: baseline
         shell: bash
         run: |
-          git fetch --no-tags origin +refs/heads/master:refs/heads/master
-          if git cat-file -e master:buf.yaml 2>/dev/null; then
+          # Into the remote-tracking ref, never refs/heads/master: on a release run the checkout is
+          # master itself and git refuses to fetch into the checked-out branch.
+          git fetch --no-tags origin +refs/heads/master:refs/remotes/origin/master
+          # Compatibility is a pull-request question (this change against master). On a release run
+          # the checkout is master, so the comparison would be master against itself.
+          if [ "$GITHUB_EVENT_NAME" = pull_request ] && git cat-file -e origin/master:buf.yaml 2>/dev/null; then
             echo 'exists=true' >> "$GITHUB_OUTPUT"
           else
             echo 'exists=false' >> "$GITHUB_OUTPUT"
@@ -96,7 +111,7 @@ jobs:
           version: 1.72.0
           lint: true
           breaking: ${{ steps.baseline.outputs.exists == 'true' }}
-          breaking_against: '.git#branch=master'
+          breaking_against: '.git#ref=refs/remotes/origin/master'
           format: false
           push: false
           archive: false
