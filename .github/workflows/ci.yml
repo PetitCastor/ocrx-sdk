@@ -3,11 +3,22 @@ name: CI
 on:
   pull_request:
     branches: [master]
+  # release.yml calls this workflow so the same gates run on the commit it publishes.
+  workflow_call:
 
 permissions:
   contents: read
 
 jobs:
+  release-tools:
+    name: Release tooling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test the release version script
+        shell: pwsh
+        run: ./.github/tools/Get-NextVersion.Tests.ps1
+
   build-test:
     name: Build and test
     runs-on: windows-latest

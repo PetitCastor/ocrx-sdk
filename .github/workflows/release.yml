@@ -1,25 +1,40 @@
 name: Release SDK
 
+# A release is an explicit decision: the dispatcher picks how far the version moves and the workflow
+# derives vX.Y.Z from the latest stable tag (Get-NextVersion.ps1). Nothing publishes until the full
+# CI suite has passed on the exact commit being published.
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: Stable semver to publish
+      bump:
+        description: How far to move the version from the latest stable tag
+        type: choice
         required: true
-        default: 2.4.0
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+      version_override:
+        description: Optional exact X.Y.Z (no "v"); replaces the bump. Must be above the latest stable tag.
+        type: string
+        required: false
+        default: ''
 
 concurrency:
   group: release-sdk
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
-  release:
-    name: Publish OCRX SDK
-    runs-on: windows-latest
-    environment: nuget-release
-    permissions:
-      contents: write
-      id-token: write
+  # Cheap checks first, so a typo or a stale dispatch fails in seconds instead of after the CI suite.
+  plan:
+    name: Plan release version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,16 +50,60 @@ jobs:
           if ($env:GITHUB_SHA -ne $masterTip) {
             throw "SDK releases must use the current master tip ($masterTip), not $env:GITHUB_SHA."
           }
+      - name: Compute version
+        id: version
+        shell: pwsh
+        env:
+          BUMP: ${{ inputs.bump }}
+          VERSION_OVERRIDE: ${{ inputs.version_override }}
+        run: |
+          $version = ./.github/tools/Get-NextVersion.ps1 -Bump $env:BUMP -VersionOverride $env:VERSION_OVERRIDE
+          if (-not $version) { throw 'Could not compute the release version.' }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "Releasing v$version" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+
+  # ci.yml only runs on pull requests, and the squash commit on master never had a CI run of its own.
+  # Calling it here runs slopwatch, buf, the template cold start and the overlay portability job on
+  # the commit that is about to ship. The called workflow gets read-only contents and no id-token,
+  # and the nuget-release environment stays on the release job below, so a verify run can neither
+  # publish nor wait for the publish approval.
+  verify:
+    name: Verify
+    needs: plan
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Publish OCRX SDK
+    needs: [plan, verify]
+    runs-on: windows-latest
+    environment: nuget-release
+    env:
+      RELEASE_VERSION: ${{ needs.plan.outputs.version }}
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Re-checked here because master can advance while verify runs; what ships must be what verify saw.
+      - name: Require the reviewed master tip
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -ne 'refs/heads/master') {
+            throw 'SDK releases must be dispatched from master.'
+          }
+          git fetch origin master:refs/remotes/origin/master --no-tags
+          $masterTip = (git rev-parse origin/master).Trim()
+          if ($env:GITHUB_SHA -ne $masterTip) {
+            throw "SDK releases must use the current master tip ($masterTip), not $env:GITHUB_SHA."
+          }
+          if (git tag --list "v$env:RELEASE_VERSION") { throw "Tag v$env:RELEASE_VERSION already exists." }
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Validate version
-        shell: pwsh
-        run: |
-          $version = '${{ inputs.version }}'
-          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Expected stable semver, got '$version'." }
-          if (git tag --list "v$version") { throw "Tag v$version already exists." }
-          "RELEASE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - run: dotnet restore OcrxSdk.slnx
       - run: dotnet build OcrxSdk.slnx --no-restore -c Release "-p:MinVerVersionOverride=$env:RELEASE_VERSION"
       - run: dotnet test OcrxSdk.slnx --no-build -c Release --verbosity normal

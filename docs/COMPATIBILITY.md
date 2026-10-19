@@ -31,7 +31,17 @@ by the protocol integer rather than by matching artifact versions.
 ## Release checklist
 
 1. Publish the matching `Ocrx.Contracts`, `Ocrx.Sdk`, `Ocrx.Sdk.Testing`,
-   `Ocrx.Sdk.Overlay`, and `Ocrx.Plugin.Template` packages from `ocrx-sdk`.
+   `Ocrx.Sdk.Overlay`, and `Ocrx.Plugin.Template` packages from `ocrx-sdk`. A release is an explicit
+   dispatch of the **Release SDK** workflow from `master`, never a side effect of a merge:
+   - Choose `bump` (`patch`, `minor` or `major`). The workflow derives `vX.Y.Z` from the latest
+     stable `vX.Y.Z` tag: `minor` and `major` reset the lower components. Additive changes are a
+     `minor`; a change that may require plugin source changes is a `major`.
+   - `version_override` is optional and replaces the bump. It must be strict `X.Y.Z` (no `v`, no
+     suffix) and strictly above the latest stable tag.
+   - The run first checks that it is on the current `master` tip, then runs the whole `ci.yml` suite
+     (tests, slopwatch, proto lint and compatibility, template cold start, overlay portability) on
+     that exact commit. Only if all of it passes does the `nuget-release` environment ask for
+     approval and the packages publish, followed by the tag and the GitHub release.
 2. Build the private engine against the released `Ocrx.Contracts` package and publish the Windows
    binaries and Velopack feed through `ocrx-releases`.
 3. Run plugin replay parity against that released engine binary before publishing the plugin.
