@@ -15,10 +15,18 @@ public sealed class OverlaySpec
     /// <summary>Absolute vertical position in physical pixels when <see cref="Anchor"/> is custom.</summary>
     public int Y { get; set; }
 
-    /// <summary>Horizontal offset in physical pixels applied after anchoring.</summary>
+    /// <summary>
+    /// Horizontal offset in physical pixels applied after anchoring. For a left or right anchor it is
+    /// a margin from that edge (positive moves inward); for a centred anchor or <see cref="OverlayAnchor.Custom"/>
+    /// it is added to X.
+    /// </summary>
     public int OffsetX { get; set; }
 
-    /// <summary>Vertical offset in physical pixels applied after anchoring.</summary>
+    /// <summary>
+    /// Vertical offset in physical pixels applied after anchoring. For a top or bottom anchor it is a
+    /// margin from that edge (positive moves inward); for a middle anchor or <see cref="OverlayAnchor.Custom"/>
+    /// it is added to Y.
+    /// </summary>
     public int OffsetY { get; set; } = 24;
 
     /// <summary>Overlay width in physical pixels.</summary>
