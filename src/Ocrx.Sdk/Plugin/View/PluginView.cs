@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
@@ -27,6 +28,9 @@ public static class PluginView
 
     /// <summary>Largest data document, in UTF-8 bytes, that the engine forwards to the page.</summary>
     public const int MaxDataBytes = 1024 * 1024;
+
+    private static readonly ConcurrentDictionary<string, object> WriteLocks =
+        new(StringComparer.OrdinalIgnoreCase);
 
     private const int MoveAttempts = 5;
     private const int MoveRetryDelayMs = 20;
@@ -90,7 +94,10 @@ public static class PluginView
         try
         {
             File.WriteAllText(temp, json);
-            MoveWithRetry(temp, full);
+            // File.Replace leaves its own ~RF*.TMP backup files behind when two replaces of the same
+            // target collide, so writers in this process take turns per path.
+            lock (WriteLocks.GetOrAdd(full, static _ => new object()))
+                MoveWithRetry(temp, full);
         }
         finally
         {
