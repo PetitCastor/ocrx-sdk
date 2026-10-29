@@ -212,6 +212,16 @@ namespace Ocrx.Sdk
         public static TConfig LoadLocalConfig<TConfig>(System.Reflection.Assembly assembly, string resourceName, string pluginFolder, string fileName = "config.json")
             where TConfig : Ocrx.Sdk.PluginConfig, new () { }
     }
+    public static class PluginView
+    {
+        public const string AssetsFolder = "view";
+        public const string DataFileName = "view-data.json";
+        public const string EntryFile = "index.html";
+        public const int MaxDataBytes = 1048576;
+        public static string DataPath(string pluginFolder) { }
+        public static bool TryReadData(string path, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out System.Text.Json.JsonElement? data) { }
+        public static void WriteData<T>(string path, T data) { }
+    }
     public sealed class ProtocolMismatchException : Ocrx.Sdk.OcrxException
     {
         public ProtocolMismatchException(uint engineMin, uint engineMax, uint sdkVersion, System.Exception? innerException = null) { }

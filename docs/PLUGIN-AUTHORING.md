@@ -18,6 +18,7 @@ and tested outside this repository against the real SDK — see [§8](#8-cold-st
 - [7. Testing](#7-testing)
 - [8. Cold-start checklist](#8-cold-start-checklist)
 - [9. Config, CLI, and compatibility](#9-config-cli-and-compatibility)
+- [10. A read-only view in the OCRX window](#10-a-read-only-view-in-the-ocrx-window)
 - [Appendix: manual project setup](#appendix-manual-project-setup)
 
 ## 1. Prerequisites
@@ -714,6 +715,67 @@ matrix of which protocol/engine/SDK versions actually shipped together is in
 [`COMPATIBILITY.md`](COMPATIBILITY.md). A plugin that stays on the SDK's own types (never a generated
 proto type, never `Grpc.*`) is the one that survives a wire change; CI greps for exactly that
 (`.github/workflows/ci.yml`, "Plugin boundary grep gate").
+
+## 10. A read-only view in the OCRX window
+
+A plugin can show one read-only page in its own tab of the OCRX window. The page is for looking, not
+for acting: there is no channel from the page back to the plugin or to the engine's control API.
+Settings that someone edits belong in a [`SettingsSpec`](PLUGIN-SETTINGS.md); a view only displays.
+
+**Declaring a view.** There is no manifest field. A plugin declares a view by shipping
+`view/index.html` beside its executable, the same way it declares settings by shipping
+`settings-spec.json`. The engine shows a tab only for an installed plugin whose install directory
+contains that file. Use plain HTML, CSS and ES modules (no bundler, as in the engine's own `ui/`) and
+copy the folder to the output directory:
+
+```xml
+<ItemGroup>
+  <Content Include="view\**" CopyToOutputDirectory="PreserveNewest" />
+</ItemGroup>
+```
+
+**Publishing data.** The plugin writes one JSON document, replacing it whole whenever it changes:
+
+```csharp
+var path = PluginView.DataPath("MyPlugin");   // %LOCALAPPDATA%\OCRX\MyPlugin\view-data.json
+PluginView.WriteData(path, new { items = rows, updatedAt = DateTimeOffset.UtcNow });
+```
+
+The engine watches exactly that file, and the folder name is the plugin's own folder under
+`%LOCALAPPDATA%\OCRX`, so the engine never opens a path the plugin supplied. The engine derives the
+data folder from the plugin's install folder name, so the two must be equal (`MyPlugin` installs to
+`...\MyPlugin` and writes to `%LOCALAPPDATA%\OCRX\MyPlugin`). `DataPath` rejects names ending in a dot
+or space and Windows reserved names (`CON`, `NUL`, `PRN`, `AUX`, `COM1` to `COM9`, `LPT1` to `LPT9`). The write goes through a
+temporary file and a rename. A document over `PluginView.MaxDataBytes` (1 MiB), or one that is not
+valid JSON, is ignored and the page keeps the last good one; `WriteData` refuses to produce an
+oversized document. A plugin that writes anywhere persistent should skip `WriteData` when
+`EngineInfo.ReplayMode` is set, like any other persistent write.
+
+**What the page sees.** The engine serves `view/` under its own origin and renders it in an iframe
+with `sandbox="allow-scripts"` (no `allow-same-origin`, so the page has an opaque origin and cannot
+reach the window's token or the control API), under a CSP that allows only the page's own files and
+no network. The current document is delivered with `postMessage`, once when the page loads and again
+on every change:
+
+```js
+window.addEventListener('message', (event) => {
+  if (event.source !== window.parent) return;      // only the host window talks to the page
+  render(event.data);                              // the parsed contents of view-data.json
+});
+```
+
+The engine ignores every message that comes from the iframe: the channel is one-way.
+
+The page must not load anything from a scheme-qualified or protocol-relative URL (`http:`, `https:`,
+`ws:`, `data:`, `blob:`, `//host`); namespace URIs such as `xmlns` are fine; `PluginViewAssert` in
+`Ocrx.Sdk.Testing` checks that and that the entry file ships:
+
+```csharp
+PluginViewAssert.IsDeclaredAndSelfContained(installDirectory);
+```
+
+**Compatibility.** Additive. No wire or `ProtocolVersion` change: the view rides on two files the
+engine already knows how to locate. An older engine ignores them, and the plugin simply has no tab.
 
 ## Appendix: manual project setup
 
