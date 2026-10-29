@@ -101,14 +101,23 @@ public static class PluginView
         }
         finally
         {
-            try
-            {
-                File.Delete(temp);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                // A leftover temporary file matters less than the exception on its way up.
-            }
+            // A leftover temporary file matters less than the exception on its way up, so a failed
+            // delete is deliberately not allowed to replace it.
+            _ = TryDeleteTemp(temp);
+        }
+    }
+
+    /// <summary>Deletes <paramref name="temp"/>; true when it is gone, false when it could not be removed.</summary>
+    private static bool TryDeleteTemp(string temp)
+    {
+        try
+        {
+            File.Delete(temp);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
         }
     }
 
