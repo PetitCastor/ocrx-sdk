@@ -737,12 +737,15 @@ copy the folder to the output directory:
 **Publishing data.** The plugin writes one JSON document, replacing it whole whenever it changes:
 
 ```csharp
-var path = PluginView.DataPath("MyPlugin");   // %LOCALAPPDATA%\OCRX\MyPluginiew-data.json
+var path = PluginView.DataPath("MyPlugin");   // %LOCALAPPDATA%\OCRX\MyPlugin\view-data.json
 PluginView.WriteData(path, new { items = rows, updatedAt = DateTimeOffset.UtcNow });
 ```
 
 The engine watches exactly that file, and the folder name is the plugin's own folder under
-`%LOCALAPPDATA%\OCRX`, so the engine never opens a path the plugin supplied. The write goes through a
+`%LOCALAPPDATA%\OCRX`, so the engine never opens a path the plugin supplied. The engine derives the
+data folder from the plugin's install folder name, so the two must be equal (`MyPlugin` installs to
+`...\MyPlugin` and writes to `%LOCALAPPDATA%\OCRX\MyPlugin`). `DataPath` rejects names ending in a dot
+or space and Windows reserved names (`CON`, `NUL`, `PRN`, `AUX`, `COM1` to `COM9`, `LPT1` to `LPT9`). The write goes through a
 temporary file and a rename. A document over `PluginView.MaxDataBytes` (1 MiB), or one that is not
 valid JSON, is ignored and the page keeps the last good one; `WriteData` refuses to produce an
 oversized document. A plugin that writes anywhere persistent should skip `WriteData` when
@@ -761,7 +764,10 @@ window.addEventListener('message', (event) => {
 });
 ```
 
-The page must not reference `http:`, `https:` or protocol-relative URLs; `PluginViewAssert` in
+The engine ignores every message that comes from the iframe: the channel is one-way.
+
+The page must not load anything from a scheme-qualified or protocol-relative URL (`http:`, `https:`,
+`ws:`, `data:`, `blob:`, `//host`); namespace URIs such as `xmlns` are fine; `PluginViewAssert` in
 `Ocrx.Sdk.Testing` checks that and that the entry file ships:
 
 ```csharp

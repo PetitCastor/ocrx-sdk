@@ -28,26 +28,51 @@ public static class PluginView
     /// <summary>Largest data document, in UTF-8 bytes, that the engine forwards to the page.</summary>
     public const int MaxDataBytes = 1024 * 1024;
 
+    private const int MoveAttempts = 5;
+    private const int MoveRetryDelayMs = 20;
+
+    private static readonly string[] ReservedNames =
+    [
+        "CON", "PRN", "AUX", "NUL",
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    ];
+
     /// <summary>
     /// The conventional data document path, <c>%LOCALAPPDATA%\OCRX\{pluginFolder}\view-data.json</c> —
-    /// the same folder <see cref="ConfigSeed.EnsureInLocalAppData"/> uses.
+    /// the same folder <see cref="ConfigSeed.EnsureInLocalAppData"/> uses. The folder name must equal the
+    /// plugin's install folder name, which is how the engine finds it.
     /// </summary>
-    /// <param name="pluginFolder">A single folder name, not a path.</param>
+    /// <param name="pluginFolder">
+    /// A single folder name, not a path: no separators, no trailing dot or space, not a Windows
+    /// reserved device name.
+    /// </param>
     public static string DataPath(string pluginFolder)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(pluginFolder);
         if (pluginFolder is "." or ".." || pluginFolder.IndexOfAny(['/', '\\', ':']) >= 0
-            || pluginFolder.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-            throw new ArgumentException("The plugin folder must be a single folder name.", nameof(pluginFolder));
+            || pluginFolder.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0
+            || pluginFolder[^1] is '.' or ' '
+            || IsReservedDeviceName(pluginFolder))
+            throw new ArgumentException("The plugin folder must be a single, valid folder name.", nameof(pluginFolder));
 
         return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "OCRX", pluginFolder, DataFileName);
     }
 
+    private static bool IsReservedDeviceName(string name)
+    {
+        // Windows reserves the device name with or without an extension ("CON.txt").
+        var dot = name.IndexOf('.');
+        var stem = (dot < 0 ? name : name[..dot]).TrimEnd(' ');
+        return ReservedNames.Contains(stem, StringComparer.OrdinalIgnoreCase);
+    }
+
     /// <summary>
     /// Replaces the data document at <paramref name="path"/> (see <see cref="DataPath"/>) with
     /// <paramref name="data"/>, serialized with the SDK's camel-cased JSON conventions. The write goes
-    /// through a temporary file and a rename, so a watcher never observes a half-written document.
+    /// through a uniquely named temporary file in the same folder and a rename, so a watcher never
+    /// observes a half-written document and concurrent writers never share a temporary file.
     /// </summary>
     /// <exception cref="InvalidOperationException">The document exceeds <see cref="MaxDataBytes"/>.</exception>
     public static void WriteData<T>(string path, T data)
@@ -60,23 +85,75 @@ public static class PluginView
 
         var full = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(full)!);
-        ConfigSeed.Write(full, json);
+
+        var temp = $"{full}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            File.WriteAllText(temp, json);
+            MoveWithRetry(temp, full);
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(temp);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // A leftover temporary file matters less than the exception on its way up.
+            }
+        }
+    }
+
+    // The engine's watcher (or an antivirus scan) can hold the target open for a moment; a rename
+    // over an open file fails with an IOException that clears on its own.
+    private static void MoveWithRetry(string temp, string target)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                // ReplaceFile swaps the contents while a reader holds the old file open with delete
+                // sharing, which a plain move-over-existing does not always allow.
+                if (File.Exists(target))
+                    File.Replace(temp, target, destinationBackupFileName: null);
+                else
+                    File.Move(temp, target);
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < MoveAttempts)
+            {
+                Thread.Sleep(MoveRetryDelayMs * attempt);
+            }
+        }
     }
 
     /// <summary>
     /// Attempts to read a data document the way the engine does: within <see cref="MaxDataBytes"/> and
-    /// valid JSON. Anything else is not a document and is never forwarded.
+    /// valid JSON. Anything else is not a document and is never forwarded. The file is opened shared
+    /// for read, write and delete, so a writer replacing it is never blocked by a reader.
     /// </summary>
     public static bool TryReadData(string path, [NotNullWhen(true)] out JsonElement? data)
     {
         data = null;
         try
         {
-            var info = new FileInfo(path);
-            if (!info.Exists || info.Length > MaxDataBytes)
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
+
+            // One stream, bounded: a file that grows between a length check and a read cannot
+            // slip past the cap.
+            var buffer = new byte[MaxDataBytes + 1];
+            var read = 0;
+            int n;
+            while (read < buffer.Length && (n = stream.Read(buffer, read, buffer.Length - read)) > 0)
+                read += n;
+            if (read > MaxDataBytes)
                 return false;
 
-            using var document = JsonDocument.Parse(File.ReadAllBytes(path));
+            // JsonDocument rejects a UTF-8 byte order mark; editors and PowerShell write one.
+            var start = read >= 3 && buffer[0] == 0xEF && buffer[1] == 0xBB && buffer[2] == 0xBF ? 3 : 0;
+            using var document = JsonDocument.Parse(buffer.AsMemory(start, read - start));
             data = document.RootElement.Clone();
             return true;
         }
