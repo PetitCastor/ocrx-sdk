@@ -51,6 +51,10 @@ namespace Ocrx.Sdk.Testing
         public Ocrx.Contracts.RectF CropRect { get; init; }
         public string Text { get; init; }
     }
+    public static class PluginViewAssert
+    {
+        public static void IsDeclaredAndSelfContained(string installDirectory) { }
+    }
     public static class ReplayCorpus
     {
         public static string Resolve(string relativeDir) { }
