@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageId>Ocrx.Sdk.Window</PackageId>
+    <Description>Window host for Ocrx plugins: STA thread, close-to-hide, theme, icon and foreground activation for a plugin's own settings window.</Description>
+    <PackageTags>star-citizen;screen-capture;window;plugin;sdk</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Ocrx.Sdk.Window.Tests" />
+    <None Update="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

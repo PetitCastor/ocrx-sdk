@@ -3,12 +3,14 @@
     <Project Path="src/Ocrx.Contracts/Ocrx.Contracts.csproj" />
     <Project Path="src/Ocrx.Sdk/Ocrx.Sdk.csproj" />
     <Project Path="src/Ocrx.Sdk.Overlay/Ocrx.Sdk.Overlay.csproj" />
+    <Project Path="src/Ocrx.Sdk.Window/Ocrx.Sdk.Window.csproj" />
     <Project Path="src/Ocrx.Sdk.Testing/Ocrx.Sdk.Testing.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Ocrx.Contracts.Tests/Ocrx.Contracts.Tests.csproj" />
     <Project Path="tests/Ocrx.Sdk.Tests/Ocrx.Sdk.Tests.csproj" />
     <Project Path="tests/Ocrx.Sdk.Overlay.Tests/Ocrx.Sdk.Overlay.Tests.csproj" />
+    <Project Path="tests/Ocrx.Sdk.Window.Tests/Ocrx.Sdk.Window.Tests.csproj" />
     <Project Path="tests/Ocrx.Sdk.Testing.Tests/Ocrx.Sdk.Testing.Tests.csproj" />
   </Folder>
 </Solution>

@@ -1,0 +1,107 @@
+﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/PetitCastor/ocrx-sdk")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Ocrx.Sdk.Window.Tests")]
+[assembly: System.Runtime.Versioning.SupportedOSPlatform("Windows7.0")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
+[assembly: System.Runtime.Versioning.TargetPlatform("Windows7.0")]
+namespace Ocrx.Sdk.Window
+{
+    public sealed class FloatField : Ocrx.Sdk.Window.SettingsField, System.IEquatable<Ocrx.Sdk.Window.FloatField>
+    {
+        public FloatField(string Id, string Label, double Value, double? Min = default, double? Max = default, double Step = 0.1, string? Unit = null, string? Description = null) { }
+        public double? Max { get; init; }
+        public double? Min { get; init; }
+        public double Step { get; init; }
+        public string? Unit { get; init; }
+        public double Value { get; init; }
+    }
+    public sealed class GroupField : Ocrx.Sdk.Window.SettingsField, System.IEquatable<Ocrx.Sdk.Window.GroupField>
+    {
+        public GroupField(string Id, string Label, System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.Window.SettingsField> Fields) { }
+        public System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.Window.SettingsField> Fields { get; init; }
+    }
+    public sealed class HelpField : Ocrx.Sdk.Window.SettingsField, System.IEquatable<Ocrx.Sdk.Window.HelpField>
+    {
+        public HelpField(string Id, string Text) { }
+        public string Text { get; init; }
+    }
+    public sealed class IntField : Ocrx.Sdk.Window.SettingsField, System.IEquatable<Ocrx.Sdk.Window.IntField>
+    {
+        public IntField(string Id, string Label, int Value, int? Min = default, int? Max = default, int Step = 1, string? Unit = null, string? Description = null) { }
+        public int? Max { get; init; }
+        public int? Min { get; init; }
+        public int Step { get; init; }
+        public string? Unit { get; init; }
+        public int Value { get; init; }
+    }
+    public sealed class PluginWindowHost : System.IDisposable
+    {
+        public PluginWindowHost(System.Func<System.Windows.Forms.Form> createForm, System.Action<string>? log = null, string? threadName = null) { }
+        public System.Drawing.Icon? Icon { get; set; }
+        public Ocrx.Sdk.Window.WindowTheme Theme { get; set; }
+        public void Dispose() { }
+        public System.Threading.Tasks.Task ShowAsync() { }
+    }
+    public sealed class SelectField : Ocrx.Sdk.Window.SettingsField, System.IEquatable<Ocrx.Sdk.Window.SelectField>
+    {
+        public SelectField(string Id, string Label, string Value, System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.Window.SelectOption> Options, string? Description = null) { }
+        public System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.Window.SelectOption> Options { get; init; }
+        public string Value { get; init; }
+    }
+    public sealed class SelectOption : System.IEquatable<Ocrx.Sdk.Window.SelectOption>
+    {
+        public SelectOption(string Value, string Label) { }
+        public string Label { get; init; }
+        public string Value { get; init; }
+    }
+    public sealed class SettingsEdit : System.IEquatable<Ocrx.Sdk.Window.SettingsEdit>
+    {
+        public SettingsEdit(string FieldId, object Value) { }
+        public string FieldId { get; init; }
+        public object Value { get; init; }
+    }
+    public abstract class SettingsField : System.IEquatable<Ocrx.Sdk.Window.SettingsField>
+    {
+        protected SettingsField(string Id, string Label, string? Description = null) { }
+        public string? Description { get; init; }
+        public string Id { get; init; }
+        public string Label { get; init; }
+    }
+    public sealed class SettingsForm : System.Windows.Forms.Form
+    {
+        public SettingsForm(string title, System.Func<System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.Window.SettingsField>> fields, System.Func<Ocrx.Sdk.Window.SettingsEdit, System.Threading.Tasks.Task<Ocrx.Sdk.Window.SettingsResult>> onEdit) { }
+        protected override void OnBackColorChanged(System.EventArgs e) { }
+        protected override void OnDeactivate(System.EventArgs e) { }
+        protected override void OnForeColorChanged(System.EventArgs e) { }
+        protected override void OnFormClosing(System.Windows.Forms.FormClosingEventArgs e) { }
+        protected override void OnVisibleChanged(System.EventArgs e) { }
+    }
+    public sealed class SettingsResult : System.IEquatable<Ocrx.Sdk.Window.SettingsResult>
+    {
+        public string? Error { get; }
+        public System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.Window.SettingsField>? Fields { get; }
+        public static Ocrx.Sdk.Window.SettingsResult Fail(string error) { }
+        public static Ocrx.Sdk.Window.SettingsResult Refresh(System.Collections.Generic.IReadOnlyList<Ocrx.Sdk.Window.SettingsField> fields) { }
+    }
+    public sealed class StringField : Ocrx.Sdk.Window.SettingsField, System.IEquatable<Ocrx.Sdk.Window.StringField>
+    {
+        public StringField(string Id, string Label, string Value, string? Description = null) { }
+        public string Value { get; init; }
+    }
+    public sealed class ToggleField : Ocrx.Sdk.Window.SettingsField, System.IEquatable<Ocrx.Sdk.Window.ToggleField>
+    {
+        public ToggleField(string Id, string Label, bool Value, string? Description = null) { }
+        public bool Value { get; init; }
+    }
+    public enum WindowTheme
+    {
+        System = 0,
+        Light = 1,
+        Dark = 2,
+    }
+    public static class WindowThemes
+    {
+        public static string Format(Ocrx.Sdk.Window.WindowTheme theme) { }
+        public static bool IsDark(Ocrx.Sdk.Window.WindowTheme theme) { }
+        public static bool TryParse(string? value, out Ocrx.Sdk.Window.WindowTheme theme) { }
+    }
+}
