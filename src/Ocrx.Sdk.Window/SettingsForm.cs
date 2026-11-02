@@ -320,6 +320,7 @@ public sealed class SettingsForm : Form
             catch (Exception ex) when (ex is InvalidCastException or FormatException)
             {
                 // The plugin changed what kind of field this is; its new value stands.
+                continue;
             }
         }
 

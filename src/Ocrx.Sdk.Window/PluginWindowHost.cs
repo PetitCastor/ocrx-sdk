@@ -244,6 +244,7 @@ public sealed class PluginWindowHost : IDisposable
         catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException)
         {
             // The thread ended between the check and the call; a window going away has nothing left to show.
+            return;
         }
     }
 
