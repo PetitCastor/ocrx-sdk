@@ -63,15 +63,44 @@ public interface IOcrxPlugin
     /// panel reflects the new current values.
     /// </summary>
     /// <remarks>
+    /// DEPRECATED in favour of a plugin-owned settings window (<see cref="HasSettingsWindow"/>,
+    /// <see cref="OnOpenSettings"/>) and removed in a later major release. Not marked
+    /// <c>[Obsolete]</c>, so plugins that build with warnings as errors keep compiling.
+    /// <para>
     /// Called on the host's tick loop, sequentially with <see cref="OnTickAsync"/> — never overlapping
     /// one — so the plugin's state needs no locking. Throwing does not end the run: the host logs it
     /// and carries on, exactly as it does for a throwing tick. Defaults to a no-op, so a plugin with
     /// no editable settings is unaffected and never has to mention this method. The engine only ever
     /// sends ids the plugin itself declared in a prior spec, but a value's contents are the user's, so
     /// the plugin still validates before trusting them.
+    /// </para>
     /// </remarks>
     Task OnApplySettings(ApplySettings apply, IPluginServices services, CancellationToken ct)
         => Task.CompletedTask;
+
+    /// <summary>
+    /// Whether this plugin can open its own settings window. Declared to the engine in the Hello,
+    /// which then offers a Settings button for the plugin and sends <see cref="OnOpenSettings"/>
+    /// when it is clicked. Read once per connect.
+    /// </summary>
+    /// <remarks>Defaults to false, so an existing plugin is unaffected.</remarks>
+    bool HasSettingsWindow => false;
+
+    /// <summary>
+    /// The user clicked the plugin's Settings button: show the settings window (bring it to the
+    /// front if it is already open). The engine sends nothing else — it knows no field or value.
+    /// </summary>
+    /// <remarks>
+    /// Only sent to a plugin whose <see cref="HasSettingsWindow"/> is true. Not run on the tick loop:
+    /// the host starts it on the thread pool without awaiting it, so ticks keep flowing while it
+    /// runs, and it may overlap <see cref="OnTickAsync"/> and repeat clicks. Throwing is logged, not
+    /// fatal. Defaults to a no-op.
+    /// <para>
+    /// <paramref name="ct"/> is the session token: it is cancelled on disconnect and reconnect, so it
+    /// must not own the window's lifetime. Use it only to abandon the open request itself.
+    /// </para>
+    /// </remarks>
+    Task OnOpenSettings(IPluginServices services, CancellationToken ct) => Task.CompletedTask;
 
     /// <summary>
     /// Called after the host has opened a Track session and installed it on <paramref name="services"/>.

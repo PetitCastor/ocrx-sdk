@@ -133,6 +133,34 @@ internal sealed class TickDispatcher
     }
 
     /// <summary>
+    /// Hands the engine's "open your settings window" request to the plugin and returns at once.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not awaited, unlike <see cref="ApplySettingsAsync"/>: the plugin's settings
+    /// window lives on its own thread, so opening it must not stall the tick loop that is reading
+    /// this very stream. Task.Run also covers a plugin that blocks before its first await. A failure
+    /// is logged like a failed tick; cancellation is the host shutting down and is swallowed.
+    /// </remarks>
+    public void OpenSettings(CancellationToken ct)
+        => _ = Task.Run(() => OpenSettingsCoreAsync(ct), CancellationToken.None);
+
+    private async Task OpenSettingsCoreAsync(CancellationToken ct)
+    {
+        try
+        {
+            await _plugin.OnOpenSettings(_services, ct);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _output.WriteLine(
+                $"[{DateTime.Now:HH:mm:ss.fff}] {_plugin.Name}: opening settings failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Which of the subscribed regions the engine flagged as failed on this tick.
     /// </summary>
     /// <remarks>

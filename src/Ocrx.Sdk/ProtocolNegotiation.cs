@@ -21,8 +21,10 @@ internal static class ProtocolNegotiation
     /// <remarks>
     /// An engine that predates TASK-04 leaves both fields at their proto3 default of 0, so it fails
     /// this check like any other incompatible range. That is deliberate rather than incidental: it
-    /// cannot answer a Hello with an ack, and <see cref="CaptureClient.TrackAsync"/> now waits for
-    /// one, so letting it through here would only trade a clear message for a handshake timeout.
+    /// cannot answer a Hello with an ack, and
+    /// <see cref="CaptureClient.TrackAsync(string, IReadOnlyList{RoiSubscription}, bool, CancellationToken)"/>
+    /// now waits for one, so letting it through here would only trade a clear message for a
+    /// handshake timeout.
     /// </remarks>
     internal static void EnsureSupported(uint engineMin, uint engineMax, uint sdkVersion)
     {

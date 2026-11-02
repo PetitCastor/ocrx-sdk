@@ -19,6 +19,7 @@ and tested outside this repository against the real SDK — see [§8](#8-cold-st
 - [8. Cold-start checklist](#8-cold-start-checklist)
 - [9. Config, CLI, and compatibility](#9-config-cli-and-compatibility)
 - [10. A read-only view in the OCRX window](#10-a-read-only-view-in-the-ocrx-window)
+- [11. A settings window](#11-a-settings-window)
 - [Appendix: manual project setup](#appendix-manual-project-setup)
 
 ## 1. Prerequisites
@@ -720,7 +721,8 @@ proto type, never `Grpc.*`) is the one that survives a wire change; CI greps for
 
 A plugin can show one read-only page in its own tab of the OCRX window. The page is for looking, not
 for acting: there is no channel from the page back to the plugin or to the engine's control API.
-Settings that someone edits belong in a [`SettingsSpec`](PLUGIN-SETTINGS.md); a view only displays.
+Settings that someone edits belong in the plugin's own [settings window](#11-a-settings-window); a
+view only displays.
 
 **Declaring a view.** There is no manifest field. A plugin declares a view by shipping
 `view/index.html` beside its executable, the same way it declares settings by shipping
@@ -776,6 +778,33 @@ PluginViewAssert.IsDeclaredAndSelfContained(installDirectory);
 
 **Compatibility.** Additive. No wire or `ProtocolVersion` change: the view rides on two files the
 engine already knows how to locate. An older engine ignores them, and the plugin simply has no tab.
+
+## 11. A settings window
+
+A plugin draws its own settings window, in the plugin's process, on its own UI thread. The engine shows a Settings button on
+the plugin's row and, when it is clicked, tells the plugin to open the window; it knows no field or
+value. Declare the window and open it:
+
+```csharp
+public bool HasSettingsWindow => true;
+
+public Task OnOpenSettings(IPluginServices services, CancellationToken ct)
+{
+    _settingsWindow.ShowOrActivate();   // your window
+    return Task.CompletedTask;
+}
+```
+
+`HasSettingsWindow` is read once per connect and defaults to `false`, so a plugin without a window
+is unaffected. The host runs `OnOpenSettings` on the thread pool and does not await it, so it never
+stalls ticks, but it can overlap `OnTickAsync` and repeat clicks: make opening idempotent (raise the
+window if it is already open) and marshal to your UI thread. A throw is logged, not fatal. `ct` is
+the session token, cancelled on disconnect and reconnect, so it must not own the window's lifetime:
+use it only to abandon the open request.
+
+The older [`SettingsSpec` projection](PLUGIN-SETTINGS.md) (`PublishSettingsAsync`,
+`OnApplySettings`) is deprecated and removed in a later major release. It is not marked
+`[Obsolete]`, so existing plugins still build.
 
 ## Appendix: manual project setup
 

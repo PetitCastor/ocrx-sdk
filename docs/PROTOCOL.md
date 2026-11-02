@@ -70,6 +70,33 @@ Rules, both sides:
 - **Rejection is not retryable.** Two running processes do not change version, so the SDK raises
   `ProtocolMismatchException` on the first answer rather than polling on.
 
+## Settings window
+
+A plugin owns its settings. It draws its own window; the engine renders no field and holds no value.
+The engine keeps one generic entry point, a Settings button on the plugin's row, and the protocol
+carries just two things for it:
+
+| Direction | Message | Meaning |
+| --- | --- | --- |
+| Plugin to engine | `Hello.has_settings_window = true` | The plugin can open a settings window. `false` (what an older plugin sends) means no button. |
+| Engine to plugin | `TrackResponse.open_settings` (`OpenSettings {}`) | The user clicked the button. Carries nothing; the plugin opens or raises its window. |
+
+- **The engine sends `OpenSettings` only to a plugin that declared the flag.** An older plugin skips
+  the unknown `oneof` arm; an older engine never sends it. Both are additive, so
+  `protocol_version` is unchanged.
+- **The SDK does not run it on the tick loop.** `TrackSession.Ticks` hands it to the host and keeps
+  reading, and `IOcrxPlugin.OnOpenSettings` is started on the thread pool without being awaited: the
+  window lives on its own thread and ticks must not stall behind it. It can therefore overlap
+  `OnTickAsync`, and repeated clicks can overlap each other; the plugin makes opening idempotent.
+- **A throwing `OnOpenSettings` is logged, not fatal.**
+
+**Deprecated: the settings projection.** `TrackRequest.settings` (`SettingsSpec`) and
+`TrackResponse.apply_settings` (`ApplySettings`), with their messages, are superseded by the above
+and will be removed (field numbers reserved) in a later major release. Until then they still work.
+They are deprecated by comment only: no `[deprecated = true]` and no `[Obsolete]`, because the
+generated `[Obsolete]` would break consumers that build with warnings as errors. See
+[`PLUGIN-SETTINGS.md`](PLUGIN-SETTINGS.md) for the legacy contract.
+
 ## Version policy
 
 One unsigned integer, `Ocrx.Contracts/ProtocolVersion.cs` (`Current`, `Min`; both 1 today). It is

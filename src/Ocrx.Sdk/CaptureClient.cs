@@ -135,6 +135,14 @@ public sealed class CaptureClient : IDisposable
 
     /// <summary>
     /// Opens the Track stream, completes the handshake, sends the initial ROI set, returns the
+    /// session. Declares no settings window; see the overload taking <c>hasSettingsWindow</c>.
+    /// </summary>
+    public Task<TrackSession> TrackAsync(string clientName,
+        IReadOnlyList<RoiSubscription> rois, CancellationToken sessionCt)
+        => TrackAsync(clientName, rois, hasSettingsWindow: false, sessionCt);
+
+    /// <summary>
+    /// Opens the Track stream, completes the handshake, sends the initial ROI set, returns the
     /// session. The returned session has already been told what protocol version and engine build
     /// it is talking to — the ack is awaited here rather than surfaced through
     /// <see cref="TrackSession.Ticks"/>, so a plugin never has to filter a handshake message out of
@@ -162,6 +170,10 @@ public sealed class CaptureClient : IDisposable
     /// The complete region set for the session. Sent as the initial subscription, so it must be
     /// whole before the first tick — per-tick atomicity leaves no mid-tick round-trip to add one.
     /// </param>
+    /// <param name="hasSettingsWindow">
+    /// Declared in the Hello: the plugin can open its own settings window when the engine asks.
+    /// False is what an older plugin says.
+    /// </param>
     /// <param name="sessionCt">
     /// Governs the whole subscription, not just this call: it is the Track call's own token, so
     /// firing it later ends the stream and makes <see cref="TrackSession.Ticks"/> throw. Pass the
@@ -170,12 +182,12 @@ public sealed class CaptureClient : IDisposable
     /// an unexplained engine disconnect.
     /// </param>
     public async Task<TrackSession> TrackAsync(string clientName,
-        IReadOnlyList<RoiSubscription> rois, CancellationToken sessionCt)
+        IReadOnlyList<RoiSubscription> rois, bool hasSettingsWindow, CancellationToken sessionCt)
     {
         var session = new TrackSession(_client.Track(cancellationToken: sessionCt));
         try
         {
-            await session.SendHelloAsync(clientName, ClientProtocolVersion);
+            await session.SendHelloAsync(clientName, ClientProtocolVersion, hasSettingsWindow);
 
             // Before the ROI set rather than after: an engine that refuses the version faults the
             // stream, and subscribing into a stream already on its way down would report the
@@ -299,6 +311,13 @@ public sealed class TrackSession : IAsyncDisposable
     /// </summary>
     internal Func<ApplySettings, CancellationToken, Task>? ApplySettingsHandler { get; set; }
 
+    /// <summary>
+    /// Invoked for each <c>OpenSettings</c> the engine sends — the user clicked this plugin's
+    /// Settings button. Synchronous and expected to return at once: the host hands the work off
+    /// rather than running it on the tick loop. Null drops the message, as for an older host.
+    /// </summary>
+    internal Action<CancellationToken>? OpenSettingsHandler { get; set; }
+
     /// <summary>Ticks as they arrive. Completes normally when the server ends the stream
     /// (replay finished / engine shutdown); throws RpcException(Unavailable) if the pipe drops,
     /// and OperationCanceledException — not RpcException(Cancelled) — when either
@@ -315,6 +334,12 @@ public sealed class TrackSession : IAsyncDisposable
                 if (ApplySettingsHandler is { } handler)
                     await handler(response.ApplySettings.ToApplySettings(), ct);
 
+                continue;
+            }
+
+            if (response.MsgCase == TrackResponse.MsgOneofCase.OpenSettings)
+            {
+                OpenSettingsHandler?.Invoke(ct);
                 continue;
             }
 
@@ -377,10 +402,15 @@ public sealed class TrackSession : IAsyncDisposable
         return SendAsync(new TrackRequest { Rois = update }, ct);
     }
 
-    internal Task SendHelloAsync(string clientName, uint protocolVersion)
+    internal Task SendHelloAsync(string clientName, uint protocolVersion, bool hasSettingsWindow = false)
         => SendAsync(new TrackRequest
         {
-            Hello = new Hello { ClientName = clientName, ProtocolVersion = protocolVersion },
+            Hello = new Hello
+            {
+                ClientName = clientName,
+                ProtocolVersion = protocolVersion,
+                HasSettingsWindow = hasSettingsWindow,
+            },
         });
 
     /// <summary>

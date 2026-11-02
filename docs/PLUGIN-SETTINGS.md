@@ -1,5 +1,10 @@
 # Plugin settings
 
+> **Deprecated.** A plugin now owns its settings window: declare `IOcrxPlugin.HasSettingsWindow`
+> and open the window from `OnOpenSettings` (see §11 of [PLUGIN-AUTHORING.md](PLUGIN-AUTHORING.md)).
+> The projection described below (`SettingsSpec` / `ApplySettings`) still works but is removed in a
+> later major release. It is not marked `[Obsolete]`.
+
 OCRX plugins can project editable settings into the engine UI without giving the engine ownership
 of the plugin's schema or config. The plugin sends a complete `SettingsSpec` upstream on the
 existing `Track` stream. The engine renders generic controls from that spec and sends changed
