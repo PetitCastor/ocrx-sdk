@@ -152,6 +152,8 @@ internal sealed class TickDispatcher
         }
         catch (OperationCanceledException)
         {
+            // The session ended while the window was opening: nothing failed, so nothing to log.
+            return;
         }
         catch (Exception ex)
         {
