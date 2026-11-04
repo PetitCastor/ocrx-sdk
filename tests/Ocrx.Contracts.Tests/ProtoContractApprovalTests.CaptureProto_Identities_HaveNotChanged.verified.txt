@@ -194,6 +194,16 @@
           "EnumType": null,
           "Label": "Singular",
           "Oneof": null
+        },
+        {
+          "FieldNumber": 3,
+          "Name": "has_settings_window",
+          "JsonName": "hasSettingsWindow",
+          "Type": "Bool",
+          "MessageType": null,
+          "EnumType": null,
+          "Label": "Singular",
+          "Oneof": null
         }
       ]
     },
@@ -529,11 +539,25 @@
           "EnumType": null,
           "Label": "Singular",
           "Oneof": "msg"
+        },
+        {
+          "FieldNumber": 5,
+          "Name": "open_settings",
+          "JsonName": "openSettings",
+          "Type": "Message",
+          "MessageType": "capture.OpenSettings",
+          "EnumType": null,
+          "Label": "Singular",
+          "Oneof": "msg"
         }
       ]
     },
     {
       "FullName": "capture.StreamEnd",
+      "Fields": []
+    },
+    {
+      "FullName": "capture.OpenSettings",
       "Fields": []
     },
     {

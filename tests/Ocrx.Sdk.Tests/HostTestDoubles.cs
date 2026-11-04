@@ -41,16 +41,19 @@ internal sealed class StubPlugin : IOcrxPlugin
     private readonly Func<TickContext, CancellationToken, Task>? _onTick;
     private readonly Func<ApplySettings, IPluginServices, CancellationToken, Task>? _onApply;
     private readonly Func<IPluginServices, CancellationToken, Task>? _onConnected;
+    private readonly Func<IPluginServices, CancellationToken, Task>? _onOpenSettings;
 
     public StubPlugin(Func<TickContext, CancellationToken, Task>? onTick = null,
         RoiErrorPolicy errorPolicy = RoiErrorPolicy.PassThrough,
         Func<ApplySettings, IPluginServices, CancellationToken, Task>? onApply = null,
-        Func<IPluginServices, CancellationToken, Task>? onConnected = null)
+        Func<IPluginServices, CancellationToken, Task>? onConnected = null,
+        Func<IPluginServices, CancellationToken, Task>? onOpenSettings = null)
     {
         _onTick = onTick;
         ErrorPolicy = errorPolicy;
         _onApply = onApply;
         _onConnected = onConnected;
+        _onOpenSettings = onOpenSettings;
     }
 
     public string Name { get; init; } = "stub";
@@ -88,6 +91,11 @@ internal sealed class StubPlugin : IOcrxPlugin
         if (_onApply is not null)
             await _onApply(apply, services, ct);
     }
+
+    public bool HasSettingsWindow { get; init; }
+
+    public Task OnOpenSettings(IPluginServices services, CancellationToken ct)
+        => _onOpenSettings?.Invoke(services, ct) ?? Task.CompletedTask;
 
     public Task OnConnectedAsync(IPluginServices services, CancellationToken ct)
         => _onConnected?.Invoke(services, ct) ?? Task.CompletedTask;

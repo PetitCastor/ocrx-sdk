@@ -59,12 +59,13 @@ internal sealed class PluginSessionRunner
                     // Read per connect, not once: a plugin that moved its regions mid-run through
                     // IPluginServices.UpdateRoisAsync must resubscribe the moved set after a reconnect.
                     var rois = _plugin.Rois;
-                    await using var session = await _client.TrackAsync(_plugin.Name, rois, ct);
+                    await using var session = await _client.TrackAsync(_plugin.Name, rois, _plugin.HasSettingsWindow, ct);
 
                     // Route engine edits before consuming ticks, then install the live request-stream
                     // writer before invoking the awaited connection hook. A settings-capable plugin
                     // publishes its initial spec there, so the engine has it before the first tick.
                     session.ApplySettingsHandler = _dispatcher.ApplySettingsAsync;
+                    session.OpenSettingsHandler = _dispatcher.OpenSettings;
                     _services.PublishSettingsHandler = (spec, publishCt) =>
                         session.PublishSettingsAsync(spec, publishCt);
                     _services.UpdateRoisHandler = (updated, updateCt) =>

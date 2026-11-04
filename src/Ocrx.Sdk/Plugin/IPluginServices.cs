@@ -64,10 +64,15 @@ public interface IPluginServices
     /// widget per <see cref="SettingsField"/> and never learns what a field means.
     /// </summary>
     /// <remarks>
+    /// DEPRECATED in favour of a plugin-owned settings window (<see cref="IOcrxPlugin.HasSettingsWindow"/>)
+    /// and removed in a later major release. Not marked <c>[Obsolete]</c>, so plugins that build with
+    /// warnings as errors keep compiling.
+    /// <para>
     /// Best-effort by design: with no live session (the plugin is between connects) the call is a
     /// no-op, because the plugin re-publishes on the next <see cref="SessionEvent.Connected"/>. A
     /// default no-op implementation keeps older plugin test doubles — which know nothing about
     /// settings — compiling against this surface.
+    /// </para>
     /// </remarks>
     Task PublishSettingsAsync(SettingsSpec spec, CancellationToken ct = default) => Task.CompletedTask;
 

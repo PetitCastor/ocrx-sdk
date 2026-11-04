@@ -72,6 +72,9 @@ message RoiSpec {
 message Hello {
   string client_name = 1;  // e.g. "refinery"
   uint32 protocol_version = 2;  // 0 = legacy client (pre-versioning); engine treats 0 as 1
+  // The plugin can open its own settings window when asked (TrackResponse.open_settings). false —
+  // what an old plugin sends — means the engine offers no Settings button for it.
+  bool has_settings_window = 3;
 }
 
 // FULL replacement of the client's ROI set (idempotent; empty list = heartbeat-only client).
@@ -83,7 +86,7 @@ message TrackRequest {
   oneof msg {
     Hello hello = 1;
     RoiSetUpdate rois = 2;
-    SettingsSpec settings = 3;  // plugin projects its editable settings; see settings section
+    SettingsSpec settings = 3;  // DEPRECATED, see settings section: plugin projects its editable settings
   }
 }
 
@@ -158,14 +161,21 @@ message TrackResponse {
   oneof msg {
     TickResult tick = 1;
     HelloAck hello_ack = 2;  // sent exactly once, before first tick, in response to Hello
-    ApplySettings apply_settings = 3;  // engine forwards user edits down; see settings section
+    ApplySettings apply_settings = 3;  // DEPRECATED, see settings section: engine forwards user edits down
     StreamEnd stream_end = 4;  // engine has no more responses; client must half-close Track
+    OpenSettings open_settings = 5;  // user clicked the plugin's Settings button; see OpenSettings
   }
 }
 
 // An in-band terminal marker. Its receipt is the client-visible proof that every preceding response
 // was delivered; the client then half-closes its request stream before the engine tears down the pipe.
 message StreamEnd {}
+
+// engine -> plugin. The user asked for this plugin's settings window. Carries nothing: the engine
+// neither knows nor holds any setting, and the plugin owns the window, its fields and its values.
+// Sent only to a plugin that declared Hello.has_settings_window. An old plugin skips the unknown
+// oneof arm (proto3), and an old engine never sends it, so no ProtocolVersion bump.
+message OpenSettings {}
 
 message HelloAck {
   uint32 negotiated_protocol_version = 1;
@@ -182,7 +192,15 @@ message HelloAck {
   bool replay_mode = 5;
 }
 
-// ---------- plugin settings projection ----------
+// ---------- plugin settings projection (DEPRECATED) ----------
+//
+// Deprecated in favour of plugin-owned settings windows (Hello.has_settings_window and
+// TrackResponse.open_settings, TASK-PWIN): the plugin draws its own window and the engine renders
+// no field and holds no value. Still honoured while engines and plugins that predate that contract
+// are in the field. TrackRequest.settings (3) and TrackResponse.apply_settings (3), with the
+// messages below, will be removed (field numbers reserved) in a later major release. Deliberately
+// NOT marked [deprecated = true]: the generated C# would carry [Obsolete], which breaks consumers
+// that build with warnings as errors and still use the projection.
 //
 // A plugin projects its own editable settings into the engine's Settings panel. The engine is
 // schema-blind: it renders one generic widget per declared field and NEVER learns a field's
