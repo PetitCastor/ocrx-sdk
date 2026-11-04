@@ -18,6 +18,7 @@ game files, or inspect network traffic.
 | `Ocrx.Sdk` | Plugin host, configuration, outputs, and engine client. |
 | `Ocrx.Sdk.Testing` | Tick builders, fake services, and real-engine replay harness. |
 | `Ocrx.Sdk.Overlay` | Optional click-through Windows overlay output. |
+| `Ocrx.Sdk.Window` | Window host for a plugin's own settings window. |
 | `Ocrx.Plugin.Template` | `dotnet new ocrx-plugin` project template. |
 
 All OCRX 2 packages use the same version train, and the first public release is `2.0.0`. Nothing

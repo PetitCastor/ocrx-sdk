@@ -115,6 +115,7 @@ jobs:
             'src/Ocrx.Sdk/Ocrx.Sdk.csproj',
             'src/Ocrx.Sdk.Testing/Ocrx.Sdk.Testing.csproj',
             'src/Ocrx.Sdk.Overlay/Ocrx.Sdk.Overlay.csproj',
+            'src/Ocrx.Sdk.Window/Ocrx.Sdk.Window.csproj',
             'templates/Ocrx.Plugin.Template.csproj'
           )) {
             dotnet pack $project -c Release -o packages "-p:MinVerVersionOverride=$env:RELEASE_VERSION"
