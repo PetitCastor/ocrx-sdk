@@ -1,6 +1,6 @@
 namespace Ocrx.Sdk.Overlay;
 
-internal sealed class LingerTimerState
+internal sealed class OverlayTimerState
 {
     private nuint _next;
 

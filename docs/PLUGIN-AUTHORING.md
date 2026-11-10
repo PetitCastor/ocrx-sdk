@@ -285,7 +285,9 @@ are a margin from that edge — a positive value always moves the overlay inward
 `offsetY` keeps a bottom anchor as far from the bottom as a top anchor sits from the top. On a centred
 axis, and for custom `x`/`y`, they are added as-is.
 It is a topmost, click-through, no-activate Windows window: it never inspects the game process and
-never requires elevation. A `Cleared` record hides it; `lingerMs: 0` disables auto-hide.
+never requires elevation. A `Cleared` record (or the linger timeout; `lingerMs: 0` disables it)
+blanks the overlay; the window stays in place, invisible and click-through, so quick re-shows do
+not toggle the game's presentation mode, and it is hidden after 15 seconds with nothing to show.
 
 Set `fontFile` to a plugin-packaged `.ttf` or `.otf` when the text must not depend on a machine-installed
 font. `usePixelText` switches to one-bit pixel rendering. An optional `borderColor` plus positive

@@ -2,12 +2,12 @@ using Ocrx.Sdk.Overlay;
 
 namespace Ocrx.Sdk.Overlay.Tests;
 
-public class LingerTimerStateTests
+public class OverlayTimerStateTests
 {
     [Fact]
     public void Reset_MakesAnAlreadyQueuedTimerStale()
     {
-        var state = new LingerTimerState();
+        var state = new OverlayTimerState();
         var oldTimer = state.Reset();
         state.Clear();
 
@@ -20,7 +20,7 @@ public class LingerTimerStateTests
     [Fact]
     public void Clear_InvalidatesTheCurrentTimer()
     {
-        var state = new LingerTimerState();
+        var state = new OverlayTimerState();
         var timer = state.Reset();
 
         state.Clear();
