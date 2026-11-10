@@ -35,6 +35,12 @@ internal sealed class Win32OverlayWindow : IOverlayWindow
     private const byte AcSrcAlpha = 1;
     private const uint PmNoRemove = 0;
     private const int IdcArrow = 32512;
+    // After a clear the window stays blank so a quick re-show causes no present-mode switch in the
+    // game (about 86% of clear-to-next-show gaps are under 15 s; 20 s covers 87% and 60 s covers 90%,
+    // so a longer delay bridges almost nothing more). After this long with nothing to show the window
+    // is really hidden, because while it exists the game stays in composed flip, which measured about
+    // 20 ms more display latency (30 ms against 10 ms). Deliberately not configurable.
+    private const int IdleHideDelayMs = 15_000;
     private const string WindowClassName = "OcrxSdkOverlayWindow";
 
     private static readonly ConcurrentDictionary<nint, Win32OverlayWindow> Windows = new();
@@ -48,7 +54,8 @@ internal sealed class Win32OverlayWindow : IOverlayWindow
     private readonly PrivateFontCollection? _privateFonts;
     private readonly FontFamily? _fontFamily;
     private readonly ManualResetEventSlim _ready = new();
-    private readonly LingerTimerState _lingerTimer = new();
+    private readonly OverlayTimerState _timer = new();
+    private readonly OverlayVisibilityState _visibility = new();
     private Thread? _thread;
     private Exception? _startupFailure;
     private nint _window;
@@ -227,11 +234,11 @@ internal sealed class Win32OverlayWindow : IOverlayWindow
                     owner.ShowPending();
                     return 0;
                 case WmAppHide:
-                    owner.HideNow();
+                    owner.Apply(owner._visibility.OnClear());
                     return 0;
                 case WmTimer:
-                    if (owner._lingerTimer.IsCurrent(wParam))
-                        owner.HideNow();
+                    if (owner._timer.IsCurrent(wParam))
+                        owner.Apply(owner._visibility.OnTimerExpiry());
                     return 0;
                 case WmClose:
                     DestroyWindow(window);
@@ -251,17 +258,21 @@ internal sealed class Win32OverlayWindow : IOverlayWindow
     {
         try
         {
+            // Kills the idle timer (or a running linger timer) on every path, including lingerMs 0,
+            // before the window shows content again.
+            StopTimer();
             Draw(Volatile.Read(ref _pendingText));
+            // Idempotent on an already visible window, and it self-heals if the window was ever hidden.
             ShowWindow(_window, SwShowNoActivate);
+            _visibility.MarkShown();
 
-            StopLingerTimer();
             var lingerMs = Volatile.Read(ref _pendingLingerMs);
             if (lingerMs > 0)
             {
-                var timerId = _lingerTimer.Reset();
+                var timerId = _timer.Reset();
                 if (SetTimer(_window, timerId, (uint)lingerMs, 0) == 0)
                 {
-                    _lingerTimer.Clear();
+                    _timer.Clear();
                     throw new Win32Exception(Marshal.GetLastWin32Error(), "SetTimer failed");
                 }
             }
@@ -269,22 +280,59 @@ internal sealed class Win32OverlayWindow : IOverlayWindow
         catch (Exception ex)
         {
             ShowWindow(_window, SwHide);
+            _visibility.MarkHidden();
             _log.WriteLine($"overlay render failed: {ex.Message}");
         }
     }
 
-    private void HideNow()
+    private void Apply(OverlayAction action)
     {
-        StopLingerTimer();
-        ShowWindow(_window, SwHide);
+        switch (action)
+        {
+            case OverlayAction.Blank:
+                // The window is blanked, not hidden: showing or hiding a topmost window over a
+                // flip-model game makes Windows switch the game's swap chain between independent flip
+                // and composed flip, and the game drops a 27-64 ms frame at each switch (measured with
+                // PresentMon). Leaving the window in place and fully transparent avoids the switch;
+                // it is really hidden only after IdleHideDelayMs with nothing to show.
+                StopTimer();
+                try
+                {
+                    Blank();
+                    var timerId = _timer.Reset();
+                    if (SetTimer(_window, timerId, IdleHideDelayMs, 0) == 0)
+                    {
+                        _timer.Clear();
+                        throw new Win32Exception(Marshal.GetLastWin32Error(), "SetTimer failed");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ShowWindow(_window, SwHide);
+                    _visibility.MarkHidden();
+                    _log.WriteLine($"overlay blank failed: {ex.Message}");
+                }
+
+                break;
+            case OverlayAction.Hide:
+                StopTimer();
+                ShowWindow(_window, SwHide);
+                break;
+        }
     }
 
-    private void StopLingerTimer()
+    private void Blank()
     {
-        var timerId = _lingerTimer.Current;
+        using var bitmap = new Bitmap(_options.Width, _options.Height, PixelFormat.Format32bppArgb);
+        PushBitmap(bitmap);
+    }
+
+    private void StopTimer()
+    {
+        var timerId = _timer.Current;
         if (timerId != 0)
             KillTimer(_window, timerId);
-        _lingerTimer.Clear();
+        _timer.Clear();
     }
 
     private void Draw(string text)

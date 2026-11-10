@@ -4,7 +4,8 @@ using Ocrx.Sdk;
 namespace Ocrx.Sdk.Overlay;
 
 /// <summary>
-/// Displays the latest observation through a click-through desktop window and hides it on a clear.
+/// Displays the latest observation through a click-through desktop window. A clear blanks it; the
+/// window itself is hidden only after an idle period.
 /// Construct through <see cref="OverlaySinkFactory"/> so unsupported platforms fail closed to a
 /// no-op sink.
 /// </summary>
